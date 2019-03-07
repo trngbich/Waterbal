@@ -17,7 +17,7 @@ import get_dictionaries as gd
 import becgis
 import os
 
-from waterpixx.wp_gdal import davgis
+from  wa_wb import davgis
 
 
 
