@@ -20,11 +20,8 @@ import gdal
 import pandas as pd
 import netCDF4
 from scipy.interpolate import griddata
-import rpy2.robjects as robjects
-from rpy2.robjects import pandas2ri
 
 np = pd.np
-
 
 def Buffer(input_shp, output_shp, distance):
     """
@@ -774,59 +771,6 @@ def Kriging_Interpolation_Points(input_shp, field_name, output_tiff, cellsize,
     # Return
     return output_tiff
 
-
-def Kriging_Interpolation_Array(input_array, x_vector, y_vector):
-    """
-    Interpolate data in an array using Ordinary Kriging
-    Reference: https://cran.r-project.org/web/packages/automap/automap.pdf
-    """
-    # Total values in array
-    n_values = np.isfinite(input_array).sum()
-    # Load function
-    pandas2ri.activate()
-    robjects.r('''
-                library(gstat)
-                library(sp)
-                library(automap)
-                kriging_interpolation <- function(x_vec, y_vec, values_arr,
-                                                  n_values){
-                  # Parameters
-                  shape <- dim(values_arr)
-                  counter <- 1
-                  df <- data.frame(X=numeric(n_values),
-                                   Y=numeric(n_values),
-                                   INFZ=numeric(n_values))
-                  # Save values into a data frame
-                  for (i in seq(shape[2])) {
-                    for (j in seq(shape[1])) {
-                      if (is.finite(values_arr[j, i])) {
-                        df[counter,] <- c(x_vec[i], y_vec[j], values_arr[j, i])
-                        counter <- counter + 1
-                      }
-                    }
-                  }
-                  # Grid
-                  coordinates(df) = ~X+Y
-                  int_grid <- expand.grid(x_vec, y_vec)
-                  names(int_grid) <- c("X", "Y")
-                  coordinates(int_grid) = ~X+Y
-                  gridded(int_grid) = TRUE
-                  # Kriging
-                  krig_output <- autoKrige(INFZ~1, df, int_grid)
-                  # Array
-                  values_out <- matrix(krig_output$krige_output$var1.pred,
-                                       nrow=length(y_vec),
-                                       ncol=length(x_vec),
-                                       byrow = TRUE)
-                  return(values_out)
-                }
-                ''')
-    kriging_interpolation = robjects.r['kriging_interpolation']
-    # Execute kriging function and get array
-    r_array = kriging_interpolation(x_vector, y_vector, input_array, n_values)
-    array_out = np.array(r_array)
-    # Return
-    return array_out
 
 
 def get_neighbors(x, y, nx, ny, cells=1):
