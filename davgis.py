@@ -20,8 +20,6 @@ import gdal
 import pandas as pd
 import netCDF4
 from scipy.interpolate import griddata
-import rpy2.robjects as robjects
-from rpy2.robjects import pandas2ri
 
 np = pd.np
 
@@ -728,106 +726,6 @@ def Interpolation_Default(input_shp, field_name, output_tiff,
 
     # Return
     return output_tiff
-
-
-def Kriging_Interpolation_Points(input_shp, field_name, output_tiff, cellsize,
-                                 bbox=None):
-    """
-    Interpolate point data using Ordinary Kriging
-    Reference: https://cran.r-project.org/web/packages/automap/automap.pdf
-    """
-    # Spatial reference
-    inp_driver = ogr.GetDriverByName('ESRI Shapefile')
-    inp_source = inp_driver.Open(input_shp, 0)
-    inp_lyr = inp_source.GetLayer()
-    inp_srs = inp_lyr.GetSpatialRef()
-    srs_wkt = inp_srs.ExportToWkt()
-    inp_source = None
-    # Temp folder
-    temp_dir = tempfile.mkdtemp()
-    temp_points_tiff = os.path.join(temp_dir, 'points_ras.tif')
-    # Points to raster
-    Feature_to_Raster(input_shp, temp_points_tiff,
-                      cellsize, field_name, -9999)
-    # Raster extent
-    if bbox:
-        xmin, ymin, xmax, ymax = bbox
-        ll_corner = [xmin, ymin]
-        x_ncells = int(math.ceil((xmax - xmin)/cellsize))
-        y_ncells = int(math.ceil((ymax - ymin)/cellsize))
-    else:
-        temp_lyr = gdal.Open(temp_points_tiff)
-        x_min, x_max, y_min, y_max = temp_lyr.GetExtent()
-        ll_corner = [x_min, y_min]
-        x_ncells = temp_lyr.RasterXSize
-        y_ncells = temp_lyr.RasterYSize
-        temp_lyr = None
-    # Raster to array
-    points_array = Raster_to_Array(temp_points_tiff, ll_corner,
-                                   x_ncells, y_ncells, values_type='float32')
-    # Run kriging
-    x_vector = np.arange(xmin + cellsize/2, xmax + cellsize/2, cellsize)
-    y_vector = np.arange(ymin + cellsize/2, ymax + cellsize/2, cellsize)
-    out_array = Kriging_Interpolation_Array(points_array, x_vector, y_vector)
-    # Save array as raster
-    Array_to_Raster(out_array, output_tiff, ll_corner, cellsize, srs_wkt)
-    # Return
-    return output_tiff
-
-
-def Kriging_Interpolation_Array(input_array, x_vector, y_vector):
-    """
-    Interpolate data in an array using Ordinary Kriging
-    Reference: https://cran.r-project.org/web/packages/automap/automap.pdf
-    """
-    # Total values in array
-    n_values = np.isfinite(input_array).sum()
-    # Load function
-    pandas2ri.activate()
-    robjects.r('''
-                library(gstat)
-                library(sp)
-                library(automap)
-                kriging_interpolation <- function(x_vec, y_vec, values_arr,
-                                                  n_values){
-                  # Parameters
-                  shape <- dim(values_arr)
-                  counter <- 1
-                  df <- data.frame(X=numeric(n_values),
-                                   Y=numeric(n_values),
-                                   INFZ=numeric(n_values))
-                  # Save values into a data frame
-                  for (i in seq(shape[2])) {
-                    for (j in seq(shape[1])) {
-                      if (is.finite(values_arr[j, i])) {
-                        df[counter,] <- c(x_vec[i], y_vec[j], values_arr[j, i])
-                        counter <- counter + 1
-                      }
-                    }
-                  }
-                  # Grid
-                  coordinates(df) = ~X+Y
-                  int_grid <- expand.grid(x_vec, y_vec)
-                  names(int_grid) <- c("X", "Y")
-                  coordinates(int_grid) = ~X+Y
-                  gridded(int_grid) = TRUE
-                  # Kriging
-                  krig_output <- autoKrige(INFZ~1, df, int_grid)
-                  # Array
-                  values_out <- matrix(krig_output$krige_output$var1.pred,
-                                       nrow=length(y_vec),
-                                       ncol=length(x_vec),
-                                       byrow = TRUE)
-                  return(values_out)
-                }
-                ''')
-    kriging_interpolation = robjects.r['kriging_interpolation']
-    # Execute kriging function and get array
-    r_array = kriging_interpolation(x_vector, y_vector, input_array, n_values)
-    array_out = np.array(r_array)
-    # Return
-    return array_out
-
 
 def get_neighbors(x, y, nx, ny, cells=1):
     """
