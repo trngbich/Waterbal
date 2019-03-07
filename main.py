@@ -7,7 +7,7 @@ Repository:
 Module: WAWB
 The code is a simplified version of WaterPix model (Authors: Gonzalo Espinoza and Claire Michailovsky)
 """
-
+import os
 from __future__ import division
 import datetime as dt
 import numpy as np
@@ -17,8 +17,17 @@ from wa_wb.functions import (lai_and_soil_calculations, SCS_surface_runoff,
                              baseflow_calculation, SCS_surface_runoff_gr, total_supply)
 
 def run(input_nc, output_nc, rootdepth_par = 1.1,
-        wateryear = ['0101','1231'], filter_par=0.5, min_qratio=0.40):
-    
+        wateryear = ['0101','1231'], filter_par=0.5, min_qratio=0.40, log=True):
+    if log:
+        fn=output_nc.replace('.nc','.txt')
+        f=open(fn,'w')
+        f.write('input_nc: {0} \n'.format(input_nc))
+        f.write('output_nc: {0} \n'.format(output_nc))
+        f.write('rootdepth_par: {0} \n'.format(rootdepth_par))
+        f.write('wateryear: {0} \n'.format(wateryear))
+        f.write('filter_par: {0} \n'.format(filter_par))
+        f.write('min_qratio: {0} \n'.format(min_qratio))        
+        f.close()
     '''
     Executes the main module of WAWB
     '''
