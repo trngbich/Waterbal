@@ -315,9 +315,9 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         Qsw_gr = np.zeros(np.shape(et))
         Qsw = np.zeros(np.shape(et))
         Qsw_gr= SCS_surface_runoff_gr(p, interception, rootdepth, thetasat, thetarz)
-#        Effective_supply = supply-etb
-#        Qsw= SCS_surface_runoff(p, Effective_supply, interception, rootdepth, thetasat, thetarz)
-        Qsw= SCS_surface_runoff(p, supply, interception, rootdepth, thetasat, thetarz)    
+        Effective_supply = supply-etb
+        Qsw= SCS_surface_runoff(p, Effective_supply, interception, rootdepth, thetasat, thetarz)
+#        Qsw= SCS_surface_runoff(p, supply, interception, rootdepth, thetasat, thetarz)    
         # if rain = 0 and supply = to ETb --> Qsw = 0
         Qsw = np.where(np.logical_and(p==0, supply==etb), 0, Qsw)
         
@@ -340,7 +340,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         Qgw = baseflow_calculation(Qsw, filter_par, qratio_y)
         incr_Qgw = Qgw - Qgw_gr
         incr_Qgw[incr_Qgw<0]=0
-        incr_Q = incr_Qsw + incr_Qgw
+        incr_Q = incr_Qsw 
         Qtot = Qsw+Qgw
         
         # Store values in output NetCDF
