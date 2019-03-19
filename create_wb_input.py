@@ -13,36 +13,66 @@ import tempfile
 import pandas as pd
 from WA_Hyperloop import becgis
 import netCDF4
-from matplotlib import pyplot as plt
-from WA_Hyperloop.sheet4_functions.sheet4_functions import fractions,update_irrigation_fractions
+import glob
 from WA_Hyperloop import get_dictionaries as gd
 
-start_date= '2010-01-01'
-years=7
-lu_ras=r"E:\Litani_WA\Data\LUCWA\LUCWA_Litan_v3i.tif"
-p_path=r'E:\Litani_WA\Data\WaPOR\PCP_M\0_L1_monthly_PCP_{yyyy}{mm}.tif'
-et_path=r'E:\Litani_WA\Data\WaPOR\AETI_M\AETI_{yyyy}{mm}.tif'
-lai_path=r'E:\Litani_WA\Data\LAI\monthly_8daily\LAI_{yyyy}{mm}.tif'
-swi_path=r'E:\\Litani_WA\\Data\\Soil_Moisture\\SWI\\040\\Mean\\SWI_{yyyy}{mm}.tif' 
-swio_path=r'E:\\Litani_WA\\Data\\Soil_Moisture\\SWI\\040\\First\\SWI_{yyyy}{mm}.tif'
-swix_path=r'E:\Litani_WA\Data\Soil_Moisture\SWI\040\Last\SWI_{yyyy}{mm}.tif'
-qratio_y_path=r'E:\Litani_WA\Data\Runoff_GLDAS\runoff_ratio_yearly\runoff_ratio_{yyyy}.tif'
-qratio_m_path=r'E:\Litani_and_Jordan\Data\Runoff_GLDAS\runoff_ratio_resampled\runoff_ratio_{yyyy}{mm}.tif'
-etg_path=r'E:\Litani_WA\Hyperloop\Old_ETgbsplit\data\etg\ETgreen_{yyyy}{mm}.tif'
-etb_path=r'E:\Litani_WA\Hyperloop\Old_ETgbsplit\data\etb\ETblue_{yyyy}{mm}.tif'
-thetasat_ras=r"E:\Litani_WA\Data\HiHydroSoils\thetasat_topsoil.tif"
-rootdepth_ras=r"E:\Litani_WA\Data\GlobCover\rd_mm.tif"
-i_path= r'E:\Litani_WA\Data\WaPOR\Interception_M\I_{yyyy}{mm}.tif'
-input_nc=r'E:\Litani_WA\Waterbal\input_nc\test_input_7years.nc'
+
+start_date= '2009-01-01'
+years=8
+lu_ras=r"D:\FAO\Litani\WA_Data\LUWA\LUCWA_Litan_v3i.tif"
+p_path=r'D:\FAO\Litani\WA_Data\WaPOR\Monthly\PCP_M\0_L1_monthly_PCP_{yyyy}{mm}.tif'
+et_path=r'D:\FAO\Litani\WA_Data\WaPOR\Monthly\AETI_M\AETI_{yyyy}{mm}.tif'
+etp_path=r"D:\FAO\Litani\WA_Data\WaPOR\Monthly\RET_M\0_L1_monthly_RET_{yyyy}{mm}.tif"
+lai_path=r'D:\FAO\Litani\WA_Data\LAI\LAI_M_filled\LAI_{yyyy}{mm}.tif'
+swi_path=r'D:\FAO\Litani\WA_Data\Soil_Moisture\SWI\040\\Mean\\SWI_{yyyy}{mm}.tif' 
+swio_path=r'D:\FAO\Litani\WA_Data\Soil_Moisture\SWI\040\\First\\SWI_{yyyy}{mm}.tif'
+swix_path=r'D:\FAO\Litani\WA_Data\Soil_Moisture\SWI\040\Last\SWI_{yyyy}{mm}.tif'
+qratio_y_path=r'D:\FAO\Litani\WA_Data\Runoff_GLDAS\runoff_ratio_yearly\runoff_ratio_{yyyy}.tif'
+qratio_m_path=r'D:\FAO\Litani\WA_Data\Runoff_GLDAS\runoff_ratio_resampled\runoff_ratio_{yyyy}{mm}.tif'
+thetasat_ras=r"D:\FAO\Litani\WA_Data\HiHydroSoils\thetasat_topsoil.tif"
+rootdepth_ras=r"D:\FAO\Litani\WA_Data\GlobCover\rd_mm.tif"
+i_path= r'D:\FAO\Litani\WA_Data\WaPOR\Monthly\Interception_M\I_{yyyy}{mm}.tif'
+input_nc=r'D:\FAO\Litani\Waterbal\input\test_input_1.nc'
 logfile=True
 epsg=4326
 
 #Calculate  sw_supply_fraction_tif
 lucs = gd.get_sheet4_6_classes() 
-equiped_sw_irrigation_tif= r'E:\Litani_WA\Data\global_data\gmia_v5_aeisw_pct_aei.tif'
-sw_supply_fractions = gd.get_sheet4_6_fractions()
-sw_supply_fraction_tif = fractions(lu_ras, sw_supply_fractions, lucs, r'E:\Litani_WA\Waterbal', filename = 'sw_supply_fraction.tif')
-sw_supply_fraction_tif = update_irrigation_fractions(lu_ras, sw_supply_fraction_tif, lucs, equiped_sw_irrigation_tif)
+equiped_sw_irrigation_tif= r'D:\FAO\Litani\WA_Data\global_data\gmia_v5_aeisw_pct_aei.tif'
+
+if logfile:
+    fn=input_nc.replace('.nc','.txt')
+    f=open(fn,'w')
+    f.write('start_date: {0} \n'.format(start_date))
+    f.write('years: {0} \n'.format(years))
+    f.write('lu_ras: {0} \n'.format(lu_ras))
+    f.write('p_path: {0} \n'.format(p_path))
+    f.write('et_path: {0} \n'.format(et_path))
+    f.write('etp_path: {0} \n'.format(etp_path))
+    f.write('lai_path: {0} \n'.format(lai_path))
+    f.write('swi_path: {0} \n'.format(swi_path))
+    f.write('swio_path: {0} \n'.format(swio_path))
+    f.write('swix_path: {0} \n'.format(swix_path))
+    f.write('qratio_y_path: {0} \n'.format(qratio_y_path))
+    f.write('qratio_m_path: {0} \n'.format(qratio_m_path))
+    f.write('thetasat_ras: {0} \n'.format(thetasat_ras))
+    f.write('rootdepth_ras: {0} \n'.format(rootdepth_ras))
+    f.write('i_path: {0} \n'.format(i_path))
+    f.write('input_nc: {0} \n'.format(input_nc))
+    f.close()
+    
+##%% interpolating LAI
+#from wa_wb.functions import interpolate_nan
+#
+#lai_fhs=glob.glob(r'D:\FAO\Litani\WA_Data\data\lai\*.tif')
+#out_dir=r'D:\FAO\Litani\WA_Data\LAI\LAI_M_filled'
+#for fh in lai_fhs:
+#    array=becgis.OpenAsArray(fh,nan_values=True)
+#    driver, NDV, xsize, ysize, GeoT, Projection = becgis.GetGeoInfo(fh)
+#    filled=interpolate_nan(array)
+#    out_fh=os.path.join(out_dir,os.path.split(fh)[-1])
+#    becgis.CreateGeoTiff(out_fh,filled,driver, NDV, xsize, ysize, GeoT, Projection)
+    
 #%% Define netCDF file dimension parameters
 
 srs, ts, te, ndv=becgis.GetGdalWarpInfo(lu_ras)
@@ -81,17 +111,15 @@ monthly_var_dict={'p':  [p_path,'Precipitation_M', 'Precipitation','mm/month'],
                    'swi': [swi_path,'SWI_M','Soil Water Index - Monthly mean','%'],
                    'swio': [swio_path,'SWIo_M','Soil water index - First day of the month','%'],
                    'swix': [swix_path,'SWIx_M','Soil water index - Last day of the month','%'],
-                   'etg': [etg_path,'ETgreen_M','ET Green','mm/month'],
-                   'etb': [etb_path,'ETblue_M','ET Blue', 'mm/month'],
                    'i': [i_path, 'Interception_M', 'Interception', 'mm/month'],
-                   'qratiom':[qratio_m_path,'RunoffRatio_M', 'Monthly Runoff Ratio','-']
+                   'qratiom':[qratio_m_path,'RunoffRatio_M', 'Monthly Runoff Ratio','-'],
+                   'etp':[etp_path,'ETref_M','Monthly Reference ET','-']
                    }
 yearly_var_dict={'qratio': [qratio_y_path,'RunoffRatio_Y', 'Yearly Runoff Ratio','-'],
                   }
 stat_var_dict={'thetasat': [thetasat_ras,'SaturatedWaterContent','Saturated water content (top soil)','cm3/cm3'],
                 'rootdepth': [rootdepth_ras,'RootDepth','Root depth','mm'],
                 'lu': [lu_ras,'LandUse','LandUse Classes WA','cm3/cm3'],
-                'sw_supply_frac':[sw_supply_fraction_tif,'SWSupplyFrac','Surfacewater Supply Fraction','-']
                 }
 ######################################
 ###Create netCDF4

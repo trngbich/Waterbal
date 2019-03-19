@@ -7,14 +7,14 @@ Repository:
 Module: WAWB
 The code is a simplified version of WaterPix model (Authors: Gonzalo Espinoza and Claire Michailovsky)
 """
-import os
 from __future__ import division
+import os
 import datetime as dt
 import numpy as np
 import pandas as pd
 import netCDF4
 from wa_wb.functions import (lai_and_soil_calculations, SCS_surface_runoff, 
-                             baseflow_calculation, SCS_surface_runoff_gr, total_supply)
+                             baseflow_calculation, SCS_surface_runoff_gr, total_supply,interpolate_nan)
 
 def run(input_nc, output_nc, rootdepth_par = 1.1,
         wateryear = ['0101','1231'], filter_par=0.5, min_qratio=0.40, log=True):
@@ -31,7 +31,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     '''
     Executes the main module of WAWB
     '''
-    # Read inputs
+    ### Read inputs
     started = dt.datetime.now()
     print 'Reading input netcdf ...'
     inp_nc = netCDF4.Dataset(input_nc, 'r')
@@ -68,7 +68,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
                                       time_indeces[key][-1] + 1):
             raise Exception('The year {0} in the netcdf file is incomplete'
                             ' or the dates are non-consecutive')
-    # Create ouput NetCDF
+    ### Create dimension variables of ouput NetCDF 
     print 'Creating output netcdf ...'
     out_nc = netCDF4.Dataset(output_nc, 'w', format="NETCDF4")
     std_fv = -9999
@@ -106,10 +106,19 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
                                      fill_value=std_fv)
     year_var.standard_name = 'time_yyyy'
     year_var.format = 'yyyy'
+
+    # Copy data
+    lat_var[:] = lat_ls
+    lon_var[:] = lon_ls
+    time_var[:] = time_ls
+    year_var[:] = years_ls
+
+    ### Read input variables
     # FillValues
     lu_fv = ncv['LandUse']._FillValue
     p_fv = ncv['Precipitation_M']._FillValue
     et_fv = ncv['Evapotranspiration_M']._FillValue
+    etp_fv= ncv['ETref_M']._FillValue
     lai_fv = ncv['LeafAreaIndex_M']._FillValue
     swi_fv = ncv['SWI_M']._FillValue
     swio_fv = ncv['SWIo_M']._FillValue
@@ -117,15 +126,69 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     qratio_y_fv = ncv['RunoffRatio_Y']._FillValue
     thetasat_fv = ncv['SaturatedWaterContent']._FillValue
     rootdepth_fv = ncv['RootDepth']._FillValue
-    etg_fv = ncv['ETgreen_M']._FillValue
-    etb_fv = ncv['ETblue_M']._FillValue
     interception_fv = ncv['Interception_M']._FillValue
-    # Copy data
-    lat_var[:] = lat_ls
-    lon_var[:] = lon_ls
-    time_var[:] = time_ls
-    year_var[:] = years_ls
-    # Create output NetCDF variables:
+    #Data
+    lu = np.array(ncv['LandUse'][:, :])
+    p = np.array(ncv['Precipitation_M'][:, :, :])
+    et = np.array(ncv['Evapotranspiration_M'][:, :, :])
+    etp= np.array(ncv['ETref_M'][:, :, :])  
+    lai = np.array(ncv['LeafAreaIndex_M'][:, :, :])
+    swi = np.array(ncv['SWI_M'][:, :, :])
+    swio = np.array(ncv['SWIo_M'][:, :, :])
+    swix = np.array(ncv['SWIx_M'][:, :, :])
+    qratio_y = np.array(ncv['RunoffRatio_Y'][:, :, :])
+    thetasat = np.array(ncv['SaturatedWaterContent'][:, :])
+    rootdepth = np.array(ncv['RootDepth'][:, :])
+    interception = np.array(ncv['Interception_M'][:, :, :])
+    
+    # Check for NoData values
+    lu[np.isclose(lu, lu_fv)] = np.nan
+    p[np.isclose(p, p_fv)] = np.nan
+    et[np.isclose(et, et_fv)] = np.nan
+    etp[np.isclose(etp, etp_fv)] = np.nan      
+    lai[np.isclose(lai, lai_fv)] = np.nan    
+    swi[np.isclose(swi, swi_fv)] = np.nan
+    swio[np.isclose(swio, swio_fv)] = np.nan
+    swix[np.isclose(swix, swix_fv)] = np.nan 
+    qratio_y[np.isclose(qratio_y, qratio_y_fv)] = np.nan
+    thetasat[np.isclose(thetasat, thetasat_fv)] = np.nan
+    rootdepth[np.isclose(rootdepth, rootdepth_fv)] = np.nan
+    interception[np.isclose(interception, interception_fv)] = np.nan
+
+    ### Create output NetCDF variables:
+
+    #Blue ET (monthly)
+    etb_var = out_nc.createVariable('ETBlue_M', 'f8',
+                                   ('time_yyyymm', 'latitude', 'longitude'),
+                                   fill_value=std_fv)
+    etb_var.long_name = 'Monthly Blue ET'
+    etb_var.units = 'mm/month'
+    etb_var.grid_mapping = 'crs'
+    
+    #Green ET (monthly)
+    etg_var = out_nc.createVariable('ETGreen_M', 'f8',
+                                   ('time_yyyymm', 'latitude', 'longitude'),
+                                   fill_value=std_fv)
+    etg_var.long_name = 'Monthly Green ET'
+    etg_var.units = 'mm/month'
+    etg_var.grid_mapping = 'crs'   
+    
+    #Blue ET (yearly)
+    etby_var = out_nc.createVariable('ETBlue_Y', 'f8',
+                                   ('time_yyyy', 'latitude', 'longitude'),
+                                   fill_value=std_fv)
+    etby_var.long_name = 'Yearly Blue ET'
+    etby_var.units = 'mm/year'
+    etby_var.grid_mapping = 'crs'
+    
+    #Green ET (yearly)
+    etgy_var = out_nc.createVariable('ETGreen_Y', 'f8',
+                                   ('time_yyyy', 'latitude', 'longitude'),
+                                   fill_value=std_fv)
+    etgy_var.long_name = 'Yearly Green ET'
+    etgy_var.units = 'mm/year'
+    etgy_var.grid_mapping = 'crs'
+    
     # Surface runoff (monthly)
     ss_var = out_nc.createVariable('SurfaceRunoff_M', 'f8',
                                    ('time_yyyymm', 'latitude', 'longitude'),
@@ -133,6 +196,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     ss_var.long_name = 'Surface runoff (fast)'
     ss_var.units = 'mm/month'
     ss_var.grid_mapping = 'crs'
+    
     # Surface runoff (yearly)
     ssy_var = out_nc.createVariable('SurfaceRunoff_Y', 'f8',
                                     ('time_yyyy', 'latitude', 'longitude'),
@@ -264,123 +328,130 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     rootdepth_var.long_name = 'Q ratio corrected'
     rootdepth_var.units = 'mm'
     rootdepth_var.grid_mapping = 'crs'
+    
+    
+    ### ET green/blue calculation  
 
-
-
+    # calibrating parameter rootdepth_par
+    rootdepth = rootdepth*rootdepth_par
+    #maximum storage in unsaturated zone
+    Smax=thetasat*rootdepth
+    # filling gaps in LAI
+    lai = np.nan_to_num(lai) #interpolating gaps before creating input ncdf
+    # Step 1: Calculate change in rootdepth soil moisture storage
+    thetarz, thetarzo, thetarzx, dsm = lai_and_soil_calculations(thetasat, lai, swi, swio, swix, rootdepth)    
+    
+    #first month according to hydrological year
+    t0=time_indeces[years_ls[0]][0]
+    
+    #initialize rainfall memory storage (not taking into account moisture due to irrigation)
+    S=np.zeros(dsm.shape)
+    S[t0-1,:,:]=rootdepth*thetarzo[t0-1,:,:]
+    # split ET blue Green
+    etg=np.zeros(et.shape)    
+    scale=1.1
+    for yyyy in years_ls:
+        for ti in time_indeces[yyyy]:
+            #Current storage is storage of previous month + rainfall residual
+            Stemp=S[ti-1]+p[ti]-et[ti]
+            #limiting storage
+            S[ti]=np.where(Stemp>Smax,Smax,np.where(Stemp<0,0,Stemp))
+            #Estimating ETgreen with budyko factor
+            phi=np.where((p[ti]==0)&(Stemp<0),0,np.where((p[ti]==0)|(Stemp<0),etp[ti]/(p[ti]+S[ti-1]),etp[ti]/p[ti]))
+            budyko = np.where(phi==0,0,scale * np.sqrt(phi*np.tanh(1/phi)*(1-np.exp(-phi))))
+            etg[ti] = np.where((p[ti]==0)|(Stemp<0),np.minimum(budyko*(p[ti]+S[ti-1]),et[ti]),np.minimum(budyko*p[ti],et[ti]))
+    etb=et-etg
+    etb_var[:,:,:]=etb
+    etg_var[:,:,:]=etg                                         
+    ### Water Balance calculation
+    #Limiting minimum Runoff Ratio
+    qratio_y[qratio_y<min_qratio]=min_qratio
+        
     for yyyy in years_ls:
         print '\tyear: {0}'.format(yyyy)
         yyyyi = years_ls.index(yyyy)
         ti1 = time_indeces[yyyy][0]
-        ti2 = time_indeces[yyyy][-1] + 1
- 
-        # Read data
-        lu = np.array(ncv['LandUse'][:, :])
-        p = np.array(ncv['Precipitation_M'][ti1:ti2, :, :])
-        et = np.array(ncv['Evapotranspiration_M'][ti1:ti2, :, :])
-        lai = np.array(ncv['LeafAreaIndex_M'][ti1:ti2, :, :])
-        swi = np.array(ncv['SWI_M'][ti1:ti2, :, :])
-        swio = np.array(ncv['SWIo_M'][ti1:ti2, :, :])
-        swix = np.array(ncv['SWIx_M'][ti1:ti2, :, :])
-        qratio_y = np.array(ncv['RunoffRatio_Y'][yyyyi, :, :])
-        etg = np.array(ncv['ETgreen_M'][ti1:ti2, :, :])
-        etb = np.array(ncv['ETblue_M'][ti1:ti2, :, :])
-        thetasat = np.array(ncv['SaturatedWaterContent'][:, :])
-        rootdepth = np.array(ncv['RootDepth'][:, :])
-        # calibration parameter rootdepth_par
-        rootdepth = rootdepth*rootdepth_par
+        ti2 = time_indeces[yyyy][-1] + 1 
         
-        interception = np.array(ncv['Interception_M'][ti1:ti2, :, :])
-        # Check for NoData values
-        lu[np.isclose(lu, lu_fv)] = np.nan
-        p[np.isclose(p, p_fv)] = np.nan
-        et[np.isclose(et, et_fv)] = np.nan
-        lai[np.isclose(lai, lai_fv)] = np.nan
-        etg[np.isclose(etg, etg_fv)] = np.nan
-        etb[np.isclose(etb, etb_fv)] = np.nan
-        # filling gaps in LAI
-        lai = np.nan_to_num(lai)
-
-        swi[np.isclose(swi, swi_fv)] = np.nan
-        swio[np.isclose(swio, swio_fv)] = np.nan
-        swix[np.isclose(swix, swix_fv)] = np.nan
-        
-        # qratio limiting Qgw:
-        qratio_y[np.isclose(qratio_y, qratio_y_fv)] = np.nan
-        qratio_y[qratio_y<min_qratio]=min_qratio
-        
-        thetasat[np.isclose(thetasat, thetasat_fv)] = np.nan
-        rootdepth[np.isclose(rootdepth, rootdepth_fv)] = np.nan
-        interception[np.isclose(interception, interception_fv)] = np.nan
-        
-        #rootdepth soil moisture
-        thetarz, thetarzo, thetarzx, dsm = lai_and_soil_calculations(thetasat, lai, swi, swio, swix, rootdepth)
+        #Read data of the year
+        P=p[ti1:ti2, :, :]
+        ET=et[ti1:ti2, :, :]
+        DSM=dsm[ti1:ti2, :, :]
+        ETB=etb[ti1:ti2, :, :]
+        ETG=etg[ti1:ti2, :, :]
+        I=interception[ti1:ti2, :, :]
+        THETArz=thetarz[ti1:ti2, :, :]
+        Qratio=qratio_y[yyyyi,: ,:]
         
         # Check P-ET-dsm
-        p_et_dsm = np.sum(p, axis=0) - np.sum(et, axis=0) - np.sum(dsm, axis=0)
+        p_et_dsm = np.sum(P, axis=0) - np.sum(ET, axis=0) - np.sum(DSM, axis=0)
         
-        # simple supply comuptation based on blue ET and LU
-        supply = total_supply(etb, lu)
+        # Step 2: simple supply comuptation based on blue ET and LU
+        supply = total_supply(ETB, lu)
         
-        Qsw_gr = np.zeros(np.shape(et))
-        Qsw = np.zeros(np.shape(et))
-        Qsw_gr= SCS_surface_runoff_gr(p, interception, rootdepth, thetasat, thetarz)
-#        Effective_supply = supply-etb
-#        Qsw= SCS_surface_runoff(p, Effective_supply, interception, rootdepth, thetasat, thetarz)
-        Qsw= SCS_surface_runoff(p, supply, interception, rootdepth, thetasat, thetarz)    
-        # if rain = 0 and supply = to ETb --> Qsw = 0
-        Qsw = np.where(np.logical_and(p==0, supply==etb), 0, Qsw)
-        
-        # check for green pixels
-        Qsw_gr = np.where(p==0, 0, Qsw_gr)
-        # otherwise I mess up delta Qsw
-        Qsw_gr = np.where(etb==0, Qsw_gr, 0)
-                
+        # Step 3: Estimate Surface runoff
+        Qsw_gr = np.zeros(np.shape(ET))
+        Qsw = np.zeros(np.shape(ET))
+        #SCS equation for 'rainfall' surface runoff
+        Qsw_gr= SCS_surface_runoff_gr(P, I, rootdepth, thetasat, THETArz)                
+        Qsw_gr = np.where(P==0, 0, Qsw_gr) # if rain = 0 --> Qsw_gr=0
+        Qsw_gr = np.where(ETB==0, Qsw_gr, 0)  # if ETblue != 0 -->  incr_Qsw = Qsw (otherwise I mess up delta Qsw)
+        #SCS equation for total surface runoff
+        Qsw= SCS_surface_runoff(P, supply, I, rootdepth, thetasat, THETArz)
+        Qsw = np.where(np.logical_and(P==0, supply==ETB), 0, Qsw) # if rain = 0 and supply = to ETb --> Qsw = 0
+      
+   
+        # incremental surface runoff        
         incr_Qsw = Qsw-Qsw_gr
         incr_Qsw[incr_Qsw<0]=0
         
-        perc_gr = p-etg-dsm-Qsw_gr
+        #Step 4: Estimate Percolation        
+        perc_gr = P-ETG-DSM-Qsw_gr
         # otherwise I mess up delta perc
-        perc_gr = np.where(etb==0, perc_gr, 0)
-        perc = p+supply-et-dsm-Qsw
+        perc_gr = np.where(ETB==0, perc_gr, 0)
+        perc = P+supply-ET-DSM-Qsw
         incr_perc = perc-perc_gr
         incr_perc[incr_perc<0]=0 # I'm not sure this should only be positive...
         
-        Qgw_gr = baseflow_calculation(Qsw_gr, filter_par, qratio_y)
-        Qgw = baseflow_calculation(Qsw, filter_par, qratio_y)
+        #Step 5: Estimate base flow using runoff ratio
+        Qgw_gr = baseflow_calculation(Qsw_gr, filter_par, Qratio)
+        Qgw = baseflow_calculation(Qsw, filter_par, Qratio)
         incr_Qgw = Qgw - Qgw_gr
         incr_Qgw[incr_Qgw<0]=0
         incr_Q = incr_Qsw + incr_Qgw
         Qtot = Qsw+Qgw
         
-        # Store values in output NetCDF
+        ### Store values in output NetCDF
         
         ss_var[ti1:ti2, :, :] = Qsw
         bf_var[ti1:ti2, :, :] = Qgw
         sr_var[ti1:ti2, :, :] = Qtot
-        dsm_var[ti1:ti2, :, :] = dsm
+        dsm_var[ti1:ti2, :, :] = DSM
         per_var[ti1:ti2, :, :] = perc
-        rdsm_var[ti1:ti2, :, :] = thetarz
+        rdsm_var[ti1:ti2, :, :] = THETArz
         sup_var[ti1:ti2, :, :] = supply
         incss_var[ti1:ti2, :, :] = incr_Q
         incper_var[ti1:ti2,:, :] = incr_perc
         rootdepth_var[:, :] = rootdepth
-        qratio_y_corr_var[:,:] = qratio_y
-        
+        qratio_y_corr_var[:,:] = Qratio      
+                
     
-
-    # Calculate yearly variables
-    print 'Calculating values per year...'
+    ### Calculate yearly variables
+    print 'Calculating output values per year...'
     for yyyy in years_ls:
         # Time indeces
         yyyyi = years_ls.index(yyyy)
         ti1 = time_indeces[yyyy][0]
         ti2 = time_indeces[yyyy][-1] + 1
+        
         # Sums used in efficiency calculation
         supply_yearly_val = np.sum(sup_var[ti1:ti2, :, :], axis=0)
         inc_ss_yearly_val = np.sum(incss_var[ti1:ti2, :, :], axis=0)
         inc_per_yearly_val = np.sum(incper_var[ti1:ti2, :, :], axis=0)
         # Store values
         ssy_var[yyyyi, :, :] = np.sum(ss_var[ti1:ti2, :, :], axis=0)
+        etby_var[yyyyi, :, :] = np.sum(etb_var[ti1:ti2, :, :], axis=0)
+        etgy_var[yyyyi, :, :] = np.sum(etg_var[ti1:ti2, :, :], axis=0)
         incssy_var[yyyyi, :, :] = inc_ss_yearly_val
         bfy_var[yyyyi, :, :] = np.sum(bf_var[ti1:ti2, :, :], axis=0)
         sry_var[yyyyi, :, :] = np.sum(sr_var[ti1:ti2, :, :], axis=0)
@@ -388,7 +459,8 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         pery_var[yyyyi, :, :] = np.sum(per_var[ti1:ti2, :, :], axis=0)
         incpery_var[yyyyi, :, :] = inc_per_yearly_val
         supy_var[yyyyi, :, :] = supply_yearly_val
-        
+    
+       
     # Finishing
     print 'Closing netcdf...'
     out_nc.close()
