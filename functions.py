@@ -16,10 +16,26 @@ import netCDF4
 import get_dictionaries as gd
 import becgis
 import os
-
+from scipy import interpolate
 from wa_wb import davgis
 
-
+def interpolate_nan(array2d,method='cubic',positive=True):   
+    '''
+    fill nan values in 2-d array by interpolating
+    '''
+    x=np.arange(0,array2d.shape[1])
+    y=np.arange(0,array2d.shape[0])
+    array2d = np.ma.masked_invalid(array2d)
+    xx, yy = np.meshgrid(x, y)
+    #get only the valid values
+    x1 = xx[~array2d.mask]
+    y1 = yy[~array2d.mask]
+    newarr = array2d[~array2d.mask]
+    
+    filled = interpolate.griddata((x1, y1), newarr.ravel(),(xx, yy),method=method)
+    if positive:
+        filled=np.where(filled<0,0,filled)
+    return filled
 
 def lai_and_soil_calculations(thetasat, lai, swi, swio, swix, rootdepth):
     '''
