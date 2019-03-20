@@ -106,10 +106,19 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
                                      fill_value=std_fv)
     year_var.standard_name = 'time_yyyy'
     year_var.format = 'yyyy'
+
+    # Copy data
+    lat_var[:] = lat_ls
+    lon_var[:] = lon_ls
+    time_var[:] = time_ls
+    year_var[:] = years_ls
+
+    ### Read input variables
     # FillValues
     lu_fv = ncv['LandUse']._FillValue
     p_fv = ncv['Precipitation_M']._FillValue
     et_fv = ncv['Evapotranspiration_M']._FillValue
+    etp_fv= ncv['ETref_M']._FillValue
     lai_fv = ncv['LeafAreaIndex_M']._FillValue
     swi_fv = ncv['SWI_M']._FillValue
     swio_fv = ncv['SWIo_M']._FillValue
@@ -117,16 +126,69 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     qratio_y_fv = ncv['RunoffRatio_Y']._FillValue
     thetasat_fv = ncv['SaturatedWaterContent']._FillValue
     rootdepth_fv = ncv['RootDepth']._FillValue
-#    etg_fv = ncv['ETgreen_M']._FillValue ETb and ETg are outputs instead of inputs
-#    etb_fv = ncv['ETblue_M']._FillValue
     interception_fv = ncv['Interception_M']._FillValue
-    # Copy data
-    lat_var[:] = lat_ls
-    lon_var[:] = lon_ls
-    time_var[:] = time_ls
-    year_var[:] = years_ls
+    #Data
+    lu = np.array(ncv['LandUse'][:, :])
+    p = np.array(ncv['Precipitation_M'][:, :, :])
+    et = np.array(ncv['Evapotranspiration_M'][:, :, :])
+    etp= np.array(ncv['ETref_M'][:, :, :])  
+    lai = np.array(ncv['LeafAreaIndex_M'][:, :, :])
+    swi = np.array(ncv['SWI_M'][:, :, :])
+    swio = np.array(ncv['SWIo_M'][:, :, :])
+    swix = np.array(ncv['SWIx_M'][:, :, :])
+    qratio_y = np.array(ncv['RunoffRatio_Y'][:, :, :])
+    thetasat = np.array(ncv['SaturatedWaterContent'][:, :])
+    rootdepth = np.array(ncv['RootDepth'][:, :])
+    interception = np.array(ncv['Interception_M'][:, :, :])
     
+    # Check for NoData values
+    lu[np.isclose(lu, lu_fv)] = np.nan
+    p[np.isclose(p, p_fv)] = np.nan
+    et[np.isclose(et, et_fv)] = np.nan
+    etp[np.isclose(etp, etp_fv)] = np.nan      
+    lai[np.isclose(lai, lai_fv)] = np.nan    
+    swi[np.isclose(swi, swi_fv)] = np.nan
+    swio[np.isclose(swio, swio_fv)] = np.nan
+    swix[np.isclose(swix, swix_fv)] = np.nan 
+    qratio_y[np.isclose(qratio_y, qratio_y_fv)] = np.nan
+    thetasat[np.isclose(thetasat, thetasat_fv)] = np.nan
+    rootdepth[np.isclose(rootdepth, rootdepth_fv)] = np.nan
+    interception[np.isclose(interception, interception_fv)] = np.nan
+
     ### Create output NetCDF variables:
+
+    #Blue ET (monthly)
+    etb_var = out_nc.createVariable('ETBlue_M', 'f8',
+                                   ('time_yyyymm', 'latitude', 'longitude'),
+                                   fill_value=std_fv)
+    etb_var.long_name = 'Monthly Blue ET'
+    etb_var.units = 'mm/month'
+    etb_var.grid_mapping = 'crs'
+    
+    #Green ET (monthly)
+    etg_var = out_nc.createVariable('ETGreen_M', 'f8',
+                                   ('time_yyyymm', 'latitude', 'longitude'),
+                                   fill_value=std_fv)
+    etg_var.long_name = 'Monthly Green ET'
+    etg_var.units = 'mm/month'
+    etg_var.grid_mapping = 'crs'   
+    
+    #Blue ET (yearly)
+    etby_var = out_nc.createVariable('ETBlue_Y', 'f8',
+                                   ('time_yyyy', 'latitude', 'longitude'),
+                                   fill_value=std_fv)
+    etby_var.long_name = 'Yearly Blue ET'
+    etby_var.units = 'mm/year'
+    etby_var.grid_mapping = 'crs'
+    
+    #Green ET (yearly)
+    etgy_var = out_nc.createVariable('ETGreen_Y', 'f8',
+                                   ('time_yyyy', 'latitude', 'longitude'),
+                                   fill_value=std_fv)
+    etgy_var.long_name = 'Yearly Green ET'
+    etgy_var.units = 'mm/year'
+    etgy_var.grid_mapping = 'crs'
+    
     # Surface runoff (monthly)
     ss_var = out_nc.createVariable('SurfaceRunoff_M', 'f8',
                                    ('time_yyyymm', 'latitude', 'longitude'),
@@ -135,20 +197,6 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     ss_var.units = 'mm/month'
     ss_var.grid_mapping = 'crs'
     
-    #Blue ET
-    etb_var = out_nc.createVariable('ETBlue_M', 'f8',
-                                   ('time_yyyymm', 'latitude', 'longitude'),
-                                   fill_value=std_fv)
-    etb_var.long_name = 'Blue ET'
-    etb_var.units = 'mm/month'
-    etb_var.grid_mapping = 'crs'
-    #Green ET
-    etg_var = out_nc.createVariable('ETGreen_M', 'f8',
-                                   ('time_yyyymm', 'latitude', 'longitude'),
-                                   fill_value=std_fv)
-    etg_var.long_name = 'Green ET'
-    etg_var.units = 'mm/month'
-    etg_var.grid_mapping = 'crs'    
     # Surface runoff (yearly)
     ssy_var = out_nc.createVariable('SurfaceRunoff_Y', 'f8',
                                     ('time_yyyy', 'latitude', 'longitude'),
@@ -281,29 +329,16 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     rootdepth_var.units = 'mm'
     rootdepth_var.grid_mapping = 'crs'
     
-    ### Read input variables
-    lu = np.array(ncv['LandUse'][:, :])
-    thetasat = np.array(ncv['SaturatedWaterContent'][:, :])
-    rootdepth = np.array(ncv['RootDepth'][:, :])
-    lai = np.array(ncv['LeafAreaIndex_M'][:, :, :])
-    swi = np.array(ncv['SWI_M'][:, :, :])
-    swio = np.array(ncv['SWIo_M'][:, :, :])
-    swix = np.array(ncv['SWIx_M'][:, :, :])
-    p = np.array(ncv['Precipitation_M'][:, :, :])
-    et = np.array(ncv['Evapotranspiration_M'][:, :, :])
-    etp= np.array(ncv['ETref_M'][:, :, :])
-    qratio_y = np.array(ncv['RunoffRatio_Y'][:, :, :])
-    interception = np.array(ncv['Interception_M'][:, :, :])
     
     ### ET green/blue calculation  
 
-    # calibration parameter rootdepth_par
+    # calibrating parameter rootdepth_par
     rootdepth = rootdepth*rootdepth_par
     #maximum storage in unsaturated zone
     Smax=thetasat*rootdepth
     # filling gaps in LAI
-    lai = np.nan_to_num(lai)
-    #rootdepth soil moisture
+    lai = np.nan_to_num(lai) #interpolating gaps before creating input ncdf
+    # Step 1: Calculate change in rootdepth soil moisture storage
     thetarz, thetarzo, thetarzx, dsm = lai_and_soil_calculations(thetasat, lai, swi, swio, swix, rootdepth)    
     
     #first month according to hydrological year
@@ -317,74 +352,70 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     scale=1.1
     for yyyy in years_ls:
         for ti in time_indeces[yyyy]:
+            #Current storage is storage of previous month + rainfall residual
             Stemp=S[ti-1]+p[ti]-et[ti]
+            #limiting storage
             S[ti]=np.where(Stemp>Smax,Smax,np.where(Stemp<0,0,Stemp))
+            #Estimating ETgreen with budyko factor
             phi=np.where((p[ti]==0)&(Stemp<0),0,np.where((p[ti]==0)|(Stemp<0),etp[ti]/(p[ti]+S[ti-1]),etp[ti]/p[ti]))
             budyko = np.where(phi==0,0,scale * np.sqrt(phi*np.tanh(1/phi)*(1-np.exp(-phi))))
             etg[ti] = np.where((p[ti]==0)|(Stemp<0),np.minimum(budyko*(p[ti]+S[ti-1]),et[ti]),np.minimum(budyko*p[ti],et[ti]))
     etb=et-etg
-                                             
+    etb_var[:,:,:]=etb
+    etg_var[:,:,:]=etg                                         
     ### Water Balance calculation
+    #Limiting minimum Runoff Ratio
+    qratio_y[qratio_y<min_qratio]=min_qratio
+        
     for yyyy in years_ls:
         print '\tyear: {0}'.format(yyyy)
         yyyyi = years_ls.index(yyyy)
         ti1 = time_indeces[yyyy][0]
-        ti2 = time_indeces[yyyy][-1] + 1
- 
-
-        # Check for NoData values
-        lu[np.isclose(lu, lu_fv)] = np.nan
-        p[np.isclose(p, p_fv)] = np.nan
-        et[np.isclose(et, et_fv)] = np.nan
-        lai[np.isclose(lai, lai_fv)] = np.nan
-
-
-        swi[np.isclose(swi, swi_fv)] = np.nan
-        swio[np.isclose(swio, swio_fv)] = np.nan
-        swix[np.isclose(swix, swix_fv)] = np.nan
+        ti2 = time_indeces[yyyy][-1] + 1 
         
-        # qratio limiting Qgw:
-        qratio_y[np.isclose(qratio_y, qratio_y_fv)] = np.nan
-        qratio_y[qratio_y<min_qratio]=min_qratio
-        
-        thetasat[np.isclose(thetasat, thetasat_fv)] = np.nan
-        rootdepth[np.isclose(rootdepth, rootdepth_fv)] = np.nan
-        interception[np.isclose(interception, interception_fv)] = np.nan
-        
-        #rootdepth soil moisture
-        thetarz, thetarzo, thetarzx, dsm = lai_and_soil_calculations(thetasat, lai, swi, swio, swix, rootdepth)
+        #Read data of the year
+        P=p[ti1:ti2, :, :]
+        ET=et[ti1:ti2, :, :]
+        DSM=dsm[ti1:ti2, :, :]
+        ETB=etb[ti1:ti2, :, :]
+        ETG=etg[ti1:ti2, :, :]
+        I=interception[ti1:ti2, :, :]
+        THETArz=thetarz[ti1:ti2, :, :]
+        Qratio=qratio_y[yyyyi,: ,:]
         
         # Check P-ET-dsm
-        p_et_dsm = np.sum(p, axis=0) - np.sum(et, axis=0) - np.sum(dsm, axis=0)
+        p_et_dsm = np.sum(P, axis=0) - np.sum(ET, axis=0) - np.sum(DSM, axis=0)
         
-        # simple supply comuptation based on blue ET and LU
-        supply = total_supply(etb, lu)
+        # Step 2: simple supply comuptation based on blue ET and LU
+        supply = total_supply(ETB, lu)
         
-        Qsw_gr = np.zeros(np.shape(et))
-        Qsw = np.zeros(np.shape(et))
-        Qsw_gr= SCS_surface_runoff_gr(p, interception, rootdepth, thetasat, thetarz)
-
-        Qsw= SCS_surface_runoff(p, supply, interception, rootdepth, thetasat, thetarz)    
-        # if rain = 0 and supply = to ETb --> Qsw = 0
-        Qsw = np.where(np.logical_and(p==0, supply==etb), 0, Qsw)
-        
-        # check for green pixels
-        Qsw_gr = np.where(p==0, 0, Qsw_gr)
-        # otherwise I mess up delta Qsw
-        Qsw_gr = np.where(etb==0, Qsw_gr, 0)
-                
+        # Step 3: Estimate Surface runoff
+        Qsw_gr = np.zeros(np.shape(ET))
+        Qsw = np.zeros(np.shape(ET))
+        #SCS equation for 'rainfall' surface runoff
+        Qsw_gr= SCS_surface_runoff_gr(P, I, rootdepth, thetasat, THETArz)                
+        Qsw_gr = np.where(P==0, 0, Qsw_gr) # if rain = 0 --> Qsw_gr=0
+        Qsw_gr = np.where(ETB==0, Qsw_gr, 0)  # if ETblue != 0 -->  incr_Qsw = Qsw (otherwise I mess up delta Qsw)
+        #SCS equation for total surface runoff
+        Qsw= SCS_surface_runoff(P, supply, I, rootdepth, thetasat, THETArz)
+        Qsw = np.where(np.logical_and(P==0, supply==ETB), 0, Qsw) # if rain = 0 and supply = to ETb --> Qsw = 0
+      
+   
+        # incremental surface runoff        
         incr_Qsw = Qsw-Qsw_gr
         incr_Qsw[incr_Qsw<0]=0
         
-        perc_gr = p-etg-dsm-Qsw_gr
+        #Step 4: Estimate Percolation        
+        perc_gr = P-ETG-DSM-Qsw_gr
         # otherwise I mess up delta perc
-        perc_gr = np.where(etb==0, perc_gr, 0)
-        perc = p+supply-et-dsm-Qsw
+        perc_gr = np.where(ETB==0, perc_gr, 0)
+        perc = P+supply-ET-DSM-Qsw
         incr_perc = perc-perc_gr
         incr_perc[incr_perc<0]=0 # I'm not sure this should only be positive...
         
-        Qgw_gr = baseflow_calculation(Qsw_gr, filter_par, qratio_y)
-        Qgw = baseflow_calculation(Qsw, filter_par, qratio_y)
+        #Step 5: Estimate base flow using runoff ratio
+        Qgw_gr = baseflow_calculation(Qsw_gr, filter_par, Qratio)
+        Qgw = baseflow_calculation(Qsw, filter_par, Qratio)
         incr_Qgw = Qgw - Qgw_gr
         incr_Qgw[incr_Qgw<0]=0
         incr_Q = incr_Qsw + incr_Qgw
@@ -395,27 +426,23 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         ss_var[ti1:ti2, :, :] = Qsw
         bf_var[ti1:ti2, :, :] = Qgw
         sr_var[ti1:ti2, :, :] = Qtot
-        dsm_var[ti1:ti2, :, :] = dsm
+        dsm_var[ti1:ti2, :, :] = DSM
         per_var[ti1:ti2, :, :] = perc
-        rdsm_var[ti1:ti2, :, :] = thetarz
+        rdsm_var[ti1:ti2, :, :] = THETArz
         sup_var[ti1:ti2, :, :] = supply
         incss_var[ti1:ti2, :, :] = incr_Q
         incper_var[ti1:ti2,:, :] = incr_perc
         rootdepth_var[:, :] = rootdepth
-        qratio_y_corr_var[:,:] = qratio_y
-        
+        qratio_y_corr_var[:,:] = Qratio      
+                
     
-    etb_y=np.zeros(qratio_y.shape)
-    etg_y=np.zeros(qratio_y.shape)
-    # Calculate yearly variables
-    print 'Calculating values per year...'
+    ### Calculate yearly variables
+    print 'Calculating output values per year...'
     for yyyy in years_ls:
         # Time indeces
         yyyyi = years_ls.index(yyyy)
         ti1 = time_indeces[yyyy][0]
         ti2 = time_indeces[yyyy][-1] + 1
-        etb_y[yyyyi]=np.sum(etb[ti1:ti2,:,:],axis=0)
-        etg_y[yyyyi]=np.sum(etg[ti1:ti2,:,:],axis=0)
         
         # Sums used in efficiency calculation
         supply_yearly_val = np.sum(sup_var[ti1:ti2, :, :], axis=0)
@@ -423,6 +450,8 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         inc_per_yearly_val = np.sum(incper_var[ti1:ti2, :, :], axis=0)
         # Store values
         ssy_var[yyyyi, :, :] = np.sum(ss_var[ti1:ti2, :, :], axis=0)
+        etby_var[yyyyi, :, :] = np.sum(etb_var[ti1:ti2, :, :], axis=0)
+        etgy_var[yyyyi, :, :] = np.sum(etg_var[ti1:ti2, :, :], axis=0)
         incssy_var[yyyyi, :, :] = inc_ss_yearly_val
         bfy_var[yyyyi, :, :] = np.sum(bf_var[ti1:ti2, :, :], axis=0)
         sry_var[yyyyi, :, :] = np.sum(sr_var[ti1:ti2, :, :], axis=0)
@@ -431,22 +460,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         incpery_var[yyyyi, :, :] = inc_per_yearly_val
         supy_var[yyyyi, :, :] = supply_yearly_val
     
-#    #test lu
-#    mask_plu=np.where((lu>=1)&(lu<=7),True,False)
-#    mask_ulu=np.where((lu>=8)&(lu<=32),True,False)
-#    mask_mlu=np.where((lu>=33)&(lu<=51),True,False)
-#    mask_mwu=np.where((lu>=52)&(lu<=80),True,False)
-#    etg_20102016=np.nanmean(etg_y[:,:,:],axis=0)
-#    etb_20102016=np.nanmean(etb_y[:,:,:],axis=0)
-#    etg_plu=np.nanmean(etg_20102016[mask_plu])
-#    etb_plu=np.nanmean(etb_20102016[mask_plu])
-#    etg_ulu=np.nanmean(etg_20102016[mask_ulu])
-#    etb_ulu=np.nanmean(etb_20102016[mask_ulu])
-#    etg_mlu=np.nanmean(etg_20102016[mask_mlu])
-#    etb_mlu=np.nanmean(etb_20102016[mask_mlu])
-#    etg_mwu=np.nanmean(etg_20102016[mask_mwu])
-#    etb_mwu=np.nanmean(etb_20102016[mask_mwu])
-        
+       
     # Finishing
     print 'Closing netcdf...'
     out_nc.close()
