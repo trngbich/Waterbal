@@ -2,6 +2,7 @@
 Simple Waterpix model based on Water Balance
 
 SIMPLIFIED VERSION of WaterPix.
+(E. Salvadore, 2019)
 
 The software computes a vertical water balance at the pixel level using remote sensing inputs and it is a simplified version of the WaterPix model. Main inputs, calibration parameters and outputs with their characteristics are listed in the table below.
 
