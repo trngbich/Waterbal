@@ -23,6 +23,7 @@ from scipy.interpolate import griddata
 
 np = pd.np
 
+
 def Buffer(input_shp, output_shp, distance):
     """
     Creates a buffer of the input shapefile by a given distance
@@ -725,53 +726,6 @@ def Interpolation_Default(input_shp, field_name, output_tiff,
 
     # Return
     return output_tiff
-
-
-def Kriging_Interpolation_Points(input_shp, field_name, output_tiff, cellsize,
-                                 bbox=None):
-    """
-    Interpolate point data using Ordinary Kriging
-    Reference: https://cran.r-project.org/web/packages/automap/automap.pdf
-    """
-    # Spatial reference
-    inp_driver = ogr.GetDriverByName('ESRI Shapefile')
-    inp_source = inp_driver.Open(input_shp, 0)
-    inp_lyr = inp_source.GetLayer()
-    inp_srs = inp_lyr.GetSpatialRef()
-    srs_wkt = inp_srs.ExportToWkt()
-    inp_source = None
-    # Temp folder
-    temp_dir = tempfile.mkdtemp()
-    temp_points_tiff = os.path.join(temp_dir, 'points_ras.tif')
-    # Points to raster
-    Feature_to_Raster(input_shp, temp_points_tiff,
-                      cellsize, field_name, -9999)
-    # Raster extent
-    if bbox:
-        xmin, ymin, xmax, ymax = bbox
-        ll_corner = [xmin, ymin]
-        x_ncells = int(math.ceil((xmax - xmin)/cellsize))
-        y_ncells = int(math.ceil((ymax - ymin)/cellsize))
-    else:
-        temp_lyr = gdal.Open(temp_points_tiff)
-        x_min, x_max, y_min, y_max = temp_lyr.GetExtent()
-        ll_corner = [x_min, y_min]
-        x_ncells = temp_lyr.RasterXSize
-        y_ncells = temp_lyr.RasterYSize
-        temp_lyr = None
-    # Raster to array
-    points_array = Raster_to_Array(temp_points_tiff, ll_corner,
-                                   x_ncells, y_ncells, values_type='float32')
-    # Run kriging
-    x_vector = np.arange(xmin + cellsize/2, xmax + cellsize/2, cellsize)
-    y_vector = np.arange(ymin + cellsize/2, ymax + cellsize/2, cellsize)
-    out_array = Kriging_Interpolation_Array(points_array, x_vector, y_vector)
-    # Save array as raster
-    Array_to_Raster(out_array, output_tiff, ll_corner, cellsize, srs_wkt)
-    # Return
-    return output_tiff
-
-
 
 def get_neighbors(x, y, nx, ny, cells=1):
     """

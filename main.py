@@ -7,7 +7,7 @@ Repository:
 Module: WAWB
 The code is a simplified version of WaterPix model (Authors: Gonzalo Espinoza and Claire Michailovsky)
 """
-
+import os
 from __future__ import division
 import datetime as dt
 import numpy as np
@@ -59,8 +59,8 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     time_indeces = {}
     for j in range(years_n):
         temp_ls = [int(i.strftime('%Y%m')) for i in
-                   pd.date_range(str(years_ls[j]) + wateryear[0],
-                                 str(years_ls[j]) + wateryear[1], freq='MS')]
+                   pd.date_range(start=str(years_ls[j]) + wateryear[0],
+                                 periods=12, freq='MS')]
         time_indeces[years_ls[j]] = [time_ls.index(i) for i in temp_ls]
 
     for key in time_indeces.keys():
