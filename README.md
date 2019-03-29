@@ -49,18 +49,18 @@ There are five main computational steps:
 
 **(1) Compute ΔSM as a function of ASCAT data, root depth and LAI**
 
-![](img/1_1.png)
+![](img/1_1.PNG)
 
 
 
 Similarly we compute for the last day of the month and for the monthly average. This equation is based on Bastiaanssen et al., 2012.
 
-Then                                 ![](img/1_2.png)
+Then                                 ![](img/1_2.PNG)
 
 
 **(2) Estimation of Water Supply for blue pixels.**
 
-![](img/2.png)
+![](img/2.PNG)
 
 Assumption of consumed fraction is made for each land use class as follow:
 
@@ -88,15 +88,15 @@ This values can be adjusted in calibration phase.
 The computation is based on a modified version of the SCS flow equation (Schaake et al., 1996; Choudhury &amp; DiGirolamo, 1998).
 
 Green component in green pixels:
-![](img/3_1.png)
+![](img/3_1.PNG)
 
 Surface runoff:
 
-![](img/3_2.png)
+![](img/3_2.PNG)
 
 Incremental surface runoff is computed as:
 
-![](img/3_3.png)
+![](img/3_3.PNG)
 
 **(4) Estimate percolation as the residual of the root zone water balance.**
 
@@ -110,7 +110,7 @@ Then: ∆perc=Perc−Percg=supply−∆RO−ETb
 
 **(5) Estimate base flow as a function of surface runoff and runoff ratio.**
 
-![](img/5.png)
+![](img/5.PNG)
 
 
 
