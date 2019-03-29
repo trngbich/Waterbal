@@ -49,13 +49,13 @@ There are five main computational steps:
 
 **(1) Compute ΔSM as a function of ASCAT data, root depth and LAI**
 
-![](img/1.1.png)
+![](img/1_1.png)
 
 
 
 Similarly we compute for the last day of the month and for the monthly average. This equation is based on Bastiaanssen et al., 2012.
 
-Then                                 ![](img/1.2.png)
+Then                                 ![](img/1_2.png)
 
 
 **(2) Estimation of Water Supply for blue pixels.**
@@ -88,15 +88,15 @@ This values can be adjusted in calibration phase.
 The computation is based on a modified version of the SCS flow equation (Schaake et al., 1996; Choudhury &amp; DiGirolamo, 1998).
 
 Green component in green pixels:
-![](img/3.1.png)
+![](img/3_1.png)
 
 Surface runoff:
 
-![](img/3.2.png)
+![](img/3_2.png)
 
 Incremental surface runoff is computed as:
 
-![](img/3.3.png)
+![](img/3_3.png)
 
 **(4) Estimate percolation as the residual of the root zone water balance.**
 
