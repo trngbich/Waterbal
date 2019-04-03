@@ -8,7 +8,7 @@ Created on Fri Feb 22 21:16:13 2019
 """
 #%% Import libs & Define parameters and paths
 import numpy as np
-import os
+import shutil
 import tempfile
 import pandas as pd
 from WA_Hyperloop import becgis
@@ -44,8 +44,8 @@ if logfile:
     f.write('lu_ras: {0} \n'.format(lu_ras))
     f.write('p_path: {0} \n'.format(p_path))
     f.write('et_path: {0} \n'.format(et_path))
-    f.write('etb_path: {0} \n'.format(etp_path))
-	f.write('etg_path: {0} \n'.format(etp_path))
+    f.write('etb_path: {0} \n'.format(etb_path))
+    f.write('etg_path: {0} \n'.format(etg_path))
     f.write('lai_path: {0} \n'.format(lai_path))
     f.write('swi_path: {0} \n'.format(swi_path))
     f.write('swio_path: {0} \n'.format(swio_path))
@@ -200,4 +200,5 @@ for var in yearly_var_dict:
 
 #%% Close file
 nc_file.close()
-
+#delete temporary directory
+shutil.rmtree(temp_dir)
