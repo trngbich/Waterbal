@@ -8,7 +8,7 @@ Created on Fri Feb 22 21:16:13 2019
 """
 #%% Import libs & Define parameters and paths
 import numpy as np
-import os
+import shutil
 import tempfile
 import pandas as pd
 from WA_Hyperloop import becgis
@@ -214,4 +214,6 @@ for var in yearly_var_dict:
 
 #%% Close file
 nc_file.close()
+### clean up temporary dir
+shutil.rmtree(temp_dir)
 
