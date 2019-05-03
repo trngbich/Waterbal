@@ -155,16 +155,16 @@ def get_sheet4_6_fractions(version = '1.0'):
     'Shrubland':            1.00,
     'Rainfed Crops':        1.00,
     'Forest Plantations':   1.00,
-    'Natural Water Bodies': 0.15,
-    'Wetlands':             0.15,
-    'Natural Grasslands':   0.70,
-    'Other (Non-Manmade)':  1.0,#0.4
+    'Natural Water Bodies': 1.00,
+    'Wetlands':             1.00,
+    'Natural Grasslands':   1.00,
+    'Other (Non-Manmade)':  1.00,#0.4
     'Irrigated crops':      0.80,#0.8
-    'Managed water bodies': 0.4,#0.4
-    'Other':                0.40,#0.4
+    'Managed water bodies': 1.00,#0.4
+    'Other':                1.00,#0.4
     'Residential':          1.00,
-    'Greenhouses':          0.95,
-    'Aquaculture':          0.20}
+    'Greenhouses':          1.00,
+    'Aquaculture':          1.00}
     
     sw_supply_fractions['1.0'] = {
     'Forests':              0.005,
