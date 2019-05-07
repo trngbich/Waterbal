@@ -85,13 +85,13 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     crs_var.grid_mapping_name = inp_crs.grid_mapping_name
     crs_var.crs_wkt = inp_crs.crs_wkt
     # Latitude
-    lat_var = out_nc.createVariable(inp_lat.standard_name, 'f8',
+    lat_var = out_nc.createVariable(inp_lat.standard_name, 'f4',
                                     (inp_lat.standard_name),
                                     fill_value=inp_lat._FillValue)
     lat_var.units = inp_lat.units
     lat_var.standard_name = inp_lat.standard_name
     # Longitude
-    lon_var = out_nc.createVariable(inp_lon.standard_name, 'f8',
+    lon_var = out_nc.createVariable(inp_lon.standard_name, 'f4',
                                     (inp_lon.standard_name),
                                     fill_value=inp_lon._FillValue)
     lon_var.units = inp_lon.units
@@ -158,7 +158,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     ### Create output NetCDF variables:
 
     #Blue ET (monthly)
-    etb_var = out_nc.createVariable('ETBlue_M', 'f8',
+    etb_var = out_nc.createVariable('ETBlue_M', 'f4',
                                    ('time_yyyymm', 'latitude', 'longitude'),
                                    fill_value=std_fv)
     etb_var.long_name = 'Monthly Blue ET'
@@ -166,7 +166,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     etb_var.grid_mapping = 'crs'
     
     #Green ET (monthly)
-    etg_var = out_nc.createVariable('ETGreen_M', 'f8',
+    etg_var = out_nc.createVariable('ETGreen_M', 'f4',
                                    ('time_yyyymm', 'latitude', 'longitude'),
                                    fill_value=std_fv)
     etg_var.long_name = 'Monthly Green ET'
@@ -174,7 +174,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     etg_var.grid_mapping = 'crs'   
     
     #Blue ET (yearly)
-    etby_var = out_nc.createVariable('ETBlue_Y', 'f8',
+    etby_var = out_nc.createVariable('ETBlue_Y', 'f4',
                                    ('time_yyyy', 'latitude', 'longitude'),
                                    fill_value=std_fv)
     etby_var.long_name = 'Yearly Blue ET'
@@ -182,7 +182,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     etby_var.grid_mapping = 'crs'
     
     #Green ET (yearly)
-    etgy_var = out_nc.createVariable('ETGreen_Y', 'f8',
+    etgy_var = out_nc.createVariable('ETGreen_Y', 'f4',
                                    ('time_yyyy', 'latitude', 'longitude'),
                                    fill_value=std_fv)
     etgy_var.long_name = 'Yearly Green ET'
@@ -190,7 +190,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     etgy_var.grid_mapping = 'crs'
     
     # Surface runoff (monthly)
-    ss_var = out_nc.createVariable('SurfaceRunoff_M', 'f8',
+    ss_var = out_nc.createVariable('SurfaceRunoff_M', 'f4',
                                    ('time_yyyymm', 'latitude', 'longitude'),
                                    fill_value=std_fv)
     ss_var.long_name = 'Surface runoff (fast)'
@@ -198,77 +198,77 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     ss_var.grid_mapping = 'crs'
     
     # Surface runoff (yearly)
-    ssy_var = out_nc.createVariable('SurfaceRunoff_Y', 'f8',
+    ssy_var = out_nc.createVariable('SurfaceRunoff_Y', 'f4',
                                     ('time_yyyy', 'latitude', 'longitude'),
                                     fill_value=std_fv)
     ssy_var.long_name = 'Surface runoff (fast)'
     ssy_var.units = 'mm/year'
     ssy_var.grid_mapping = 'crs'
     # Baseflow (monthly)
-    bf_var = out_nc.createVariable('Baseflow_M', 'f8',
+    bf_var = out_nc.createVariable('Baseflow_M', 'f4',
                                    ('time_yyyymm', 'latitude', 'longitude'),
                                    fill_value=std_fv)
     bf_var.long_name = 'Baseflow (slow)'
     bf_var.units = 'mm/month'
     bf_var.grid_mapping = 'crs'
     # Baseflow (yearly)
-    bfy_var = out_nc.createVariable('Baseflow_Y', 'f8',
+    bfy_var = out_nc.createVariable('Baseflow_Y', 'f4',
                                     ('time_yyyy', 'latitude', 'longitude'),
                                     fill_value=std_fv)
     bfy_var.long_name = 'Baseflow (slow)'
     bfy_var.units = 'mm/year'
     bfy_var.grid_mapping = 'crs'
     # Total runoff (monthly)
-    sr_var = out_nc.createVariable('TotalRunoff_M', 'f8',
+    sr_var = out_nc.createVariable('TotalRunoff_M', 'f4',
                                    ('time_yyyymm', 'latitude', 'longitude'),
                                    fill_value=std_fv)
     sr_var.long_name = 'Total runoff'
     sr_var.units = 'mm/month'
     sr_var.grid_mapping = 'crs'
     # Total runoff (yearly)
-    sry_var = out_nc.createVariable('TotalRunoff_Y', 'f8',
+    sry_var = out_nc.createVariable('TotalRunoff_Y', 'f4',
                                     ('time_yyyy', 'latitude', 'longitude'),
                                     fill_value=std_fv)
     sry_var.long_name = 'Total runoff'
     sry_var.units = 'mm/year'
     sry_var.grid_mapping = 'crs'
     # Storage change - soil moisture (monthly)
-    dsm_var = out_nc.createVariable('StorageChange_M', 'f8',
+    dsm_var = out_nc.createVariable('StorageChange_M', 'f4',
                                     ('time_yyyymm', 'latitude', 'longitude'),
                                     fill_value=std_fv)
     dsm_var.long_name = 'Change in soil moisture storage'
     dsm_var.units = 'mm/month'
     dsm_var.grid_mapping = 'crs'
     # Storage change - soil moisture (yearly)
-    dsmy_var = out_nc.createVariable('StorageChange_Y', 'f8',
+    dsmy_var = out_nc.createVariable('StorageChange_Y', 'f4',
                                      ('time_yyyy', 'latitude', 'longitude'),
                                      fill_value=std_fv)
     dsmy_var.long_name = 'Change in soil moisture storage'
     dsmy_var.units = 'mm/year'
     dsmy_var.grid_mapping = 'crs'
     # Percolation (monthly)
-    per_var = out_nc.createVariable('Percolation_M', 'f8',
+    per_var = out_nc.createVariable('Percolation_M', 'f4',
                                     ('time_yyyymm', 'latitude', 'longitude'),
                                     fill_value=std_fv)
     per_var.long_name = 'Percolation'
     per_var.units = 'mm/month'
     per_var.grid_mapping = 'crs'
     # Percolation (yearly)
-    pery_var = out_nc.createVariable('Percolation_Y', 'f8',
+    pery_var = out_nc.createVariable('Percolation_Y', 'f4',
                                      ('time_yyyy', 'latitude', 'longitude'),
                                      fill_value=std_fv)
     pery_var.long_name = 'Percolation'
     pery_var.units = 'mm/year'
     pery_var.grid_mapping = 'crs'
     # Supply (monthly)
-    sup_var = out_nc.createVariable('Supply_M', 'f8',
+    sup_var = out_nc.createVariable('Supply_M', 'f4',
                                     ('time_yyyymm', 'latitude', 'longitude'),
                                     fill_value=std_fv)
     sup_var.long_name = 'Supply'
     sup_var.units = 'mm/month'
     sup_var.grid_mapping = 'crs'
     # Supply (yearly)
-    supy_var = out_nc.createVariable('Supply_Y', 'f8',
+    supy_var = out_nc.createVariable('Supply_Y', 'f4',
                                      ('time_yyyy', 'latitude', 'longitude'),
                                      fill_value=std_fv)
     supy_var.long_name = 'Supply'
@@ -276,7 +276,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     supy_var.grid_mapping = 'crs'
     
     # Root depth soil moisture (monthly)
-    rdsm_var = out_nc.createVariable('RootDepthSoilMoisture_M', 'f8',
+    rdsm_var = out_nc.createVariable('RootDepthSoilMoisture_M', 'f4',
                                      ('time_yyyymm', 'latitude', 'longitude'),
                                      fill_value=rootdepth_fv)
     rdsm_var.long_name = 'Root depth soil moisture'
@@ -284,21 +284,21 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     rdsm_var.grid_mapping = 'crs'
     
     # Incremental surface runoff (monthly)
-    incss_var = out_nc.createVariable('IncrementalRunoff_M', 'f8',
+    incss_var = out_nc.createVariable('IncrementalRunoff_M', 'f4',
                                       ('time_yyyymm', 'latitude', 'longitude'),
                                       fill_value=std_fv)
     incss_var.long_name = 'Incremental runoff'
     incss_var.units = 'mm/month'
     incss_var.grid_mapping = 'crs'
     # Incremental surface runoff (yearly)
-    incssy_var = out_nc.createVariable('IncrementalRunoff_Y', 'f8',
+    incssy_var = out_nc.createVariable('IncrementalRunoff_Y', 'f4',
                                        ('time_yyyy', 'latitude', 'longitude'),
                                        fill_value=std_fv)
     incssy_var.long_name = 'Incremental runoff'
     incssy_var.units = 'mm/year'
     incssy_var.grid_mapping = 'crs'
     # Incremental percolation (monthly)
-    incper_var = out_nc.createVariable('IncrementalPercolation_M', 'f8',
+    incper_var = out_nc.createVariable('IncrementalPercolation_M', 'f4',
                                        ('time_yyyymm',
                                         'latitude', 'longitude'),
                                        fill_value=std_fv)
@@ -306,7 +306,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     incper_var.units = 'mm/month'
     incper_var.grid_mapping = 'crs'
     # Incremental percolation (yearly)
-    incpery_var = out_nc.createVariable('IncrementalPercolation_Y', 'f8',
+    incpery_var = out_nc.createVariable('IncrementalPercolation_Y', 'f4',
                                         ('time_yyyy', 'latitude', 'longitude'),
                                         fill_value=std_fv)
     incpery_var.long_name = 'Incremental Percolation'
@@ -314,7 +314,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     incpery_var.grid_mapping = 'crs'
     
     # corrected rootdepth
-    rootdepth_var = out_nc.createVariable('RootDepth_cor', 'f8',
+    rootdepth_var = out_nc.createVariable('RootDepth_cor', 'f4',
                                            ('latitude', 'longitude'),
                                            fill_value=-9999)
     rootdepth_var.long_name = 'Root depth corrected'
@@ -322,7 +322,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     rootdepth_var.grid_mapping = 'crs'
     
     # corrected qratio_y
-    qratio_y_corr_var = out_nc.createVariable('Qratio_cor', 'f8',
+    qratio_y_corr_var = out_nc.createVariable('Qratio_cor', 'f4',
                                            ('latitude', 'longitude'),
                                            fill_value=-9999)
     rootdepth_var.long_name = 'Q ratio corrected'

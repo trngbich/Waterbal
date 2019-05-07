@@ -19,9 +19,9 @@ from WA_Hyperloop import get_dictionaries as gd
 
 start_date= '2009-01-01'
 years=8
-lu_ras=r"D:\FAO\Litani\WA_Data\LUWA\LUCWA_Litan_v3i.tif"
+lu_ras=r"D:\FAO\Litani\WA_Data\LUWA\LUCWA_2013_100m_v2_1.tif"
 p_path=r'D:\FAO\Litani\WA_Data\WaPOR\Monthly\PCP_M\0_L1_monthly_PCP_{yyyy}{mm}.tif'
-et_path=r'D:\FAO\Litani\WA_Data\WaPOR\Monthly\AETI_M\AETI_{yyyy}{mm}.tif'
+et_path=r"D:\FAO\Litani\WA_Data\WaPOR\Monthly_100m\AETI_M\AETI_{yyyy}{mm}.tif"
 etp_path=r"D:\FAO\Litani\WA_Data\WaPOR\Monthly\RET_M\0_L1_monthly_RET_{yyyy}{mm}.tif"
 lai_path=r'D:\FAO\Litani\WA_Data\LAI\LAI_M_filled\LAI_{yyyy}{mm}.tif'
 swi_path=r'D:\FAO\Litani\WA_Data\Soil_Moisture\SWI\040\\Mean\\SWI_{yyyy}{mm}.tif' 
@@ -30,9 +30,9 @@ swix_path=r'D:\FAO\Litani\WA_Data\Soil_Moisture\SWI\040\Last\SWI_{yyyy}{mm}.tif'
 qratio_y_path=r'D:\FAO\Litani\WA_Data\Runoff_GLDAS\runoff_ratio_yearly\runoff_ratio_{yyyy}.tif'
 qratio_m_path=r'D:\FAO\Litani\WA_Data\Runoff_GLDAS\runoff_ratio_resampled\runoff_ratio_{yyyy}{mm}.tif'
 thetasat_ras=r"D:\FAO\Litani\WA_Data\HiHydroSoils\thetasat_topsoil.tif"
-rootdepth_ras=r"D:\FAO\Litani\WA_Data\GlobCover\rd_mm.tif"
-i_path= r'D:\FAO\Litani\WA_Data\WaPOR\Monthly\Interception_M\I_{yyyy}{mm}.tif'
-input_nc=r'D:\FAO\Litani\Waterbal\input\test_input_1.nc'
+rootdepth_ras=r"D:\FAO\Litani\WA_Data\RootDepth\rd_mm.tif"
+i_path= r"D:\FAO\Litani\WA_Data\WaPOR\Monthly_100m\Interception\I_{yyyy}{mm}.tif"
+input_nc=r"D:\FAO\Litani\Waterbal\input\Litani_100m_input1.nc"
 logfile=True
 epsg=4326
 
@@ -139,12 +139,12 @@ crs_var.standard_name = 'crs'
 crs_var.grid_mapping_name = 'latitude_longitude'
 crs_var.crs_wkt = unicode(str(Projection),'utf-8')
 
-lat_var = nc_file.createVariable('latitude', 'f8', ('latitude'),fill_value=-9999)
+lat_var = nc_file.createVariable('latitude', 'f4', ('latitude'),fill_value=-9999)
 lat_var.units = 'degrees_north'
 lat_var.standard_name = 'latitude'
 lat_var[:] = lat_ls
 
-lon_var = nc_file.createVariable('longitude', 'f8', ('longitude'),fill_value=-9999)
+lon_var = nc_file.createVariable('longitude', 'f4', ('longitude'),fill_value=-9999)
 lon_var.units = 'degrees_east'
 lon_var.standard_name = 'longitude'
 lon_var[:] = lon_ls
@@ -167,7 +167,7 @@ for var in stat_var_dict:
     path,shortname,longname,unit=stat_var_dict[var]
     print var,path,shortname,longname,unit
     #Create var
-    exec('{0}_var = nc_file.createVariable(\'{1}\',\'f8\',(\'latitude\',\'longitude\'),fill_value=-9999)'.format(var,shortname))
+    exec('{0}_var = nc_file.createVariable(\'{1}\',\'f4\',(\'latitude\',\'longitude\'),fill_value=-9999)'.format(var,shortname))
     exec('{0}_var.long_name=\'{1}\''.format(var,longname))
     exec('{0}_var.units=\'{1}\''.format(var,unit))
     exec('{0}_var.grid_mapping=\'crs\''.format(var))
@@ -180,7 +180,7 @@ for var in monthly_var_dict:
     path,shortname,longname,unit=monthly_var_dict[var]
     print var,path,shortname,longname,unit
     #Create var
-    exec('{0}_var = nc_file.createVariable(\'{1}\',\'f8\',(\'time_yyyymm\',\'latitude\',\'longitude\'),fill_value=-9999)'.format(var,shortname))
+    exec('{0}_var = nc_file.createVariable(\'{1}\',\'f4\',(\'time_yyyymm\',\'latitude\',\'longitude\'),fill_value=-9999)'.format(var,shortname))
     exec('{0}_var.long_name=\'{1}\''.format(var,longname))
     exec('{0}_var.units=\'{1}\''.format(var,unit))
     exec('{0}_var.grid_mapping=\'crs\''.format(var))
@@ -199,7 +199,7 @@ for var in yearly_var_dict:
     path,shortname,longname,unit=yearly_var_dict[var]
     print var,path,shortname,longname,unit
     #Create var
-    exec('{0}_var = nc_file.createVariable(\'{1}\',\'f8\',(\'time_yyyy\',\'latitude\',\'longitude\'),fill_value=-9999)'.format(var,shortname))
+    exec('{0}_var = nc_file.createVariable(\'{1}\',\'f4\',(\'time_yyyy\',\'latitude\',\'longitude\'),fill_value=-9999)'.format(var,shortname))
     exec('{0}_var.long_name=\'{1}\''.format(var,longname))
     exec('{0}_var.units=\'{1}\''.format(var,unit))
     exec('{0}_var.grid_mapping=\'crs\''.format(var))
