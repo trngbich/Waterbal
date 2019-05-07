@@ -163,7 +163,7 @@ def get_sheet4_6_fractions(version = '1.0'):
     'Managed water bodies': 1.00,#0.4
     'Other':                1.00,#0.4
     'Residential':          1.00,
-    'Greenhouses':          1.00,
+    'Greenhouses':          0.95,
     'Aquaculture':          1.00}
     
     sw_supply_fractions['1.0'] = {
