@@ -93,7 +93,16 @@ def baseflow_calculation(Qsw, filter_par, qratio_y):
     
     return Qgw
 
+def baseflow_mcalculation(Qsw, qratio_m):
+    '''
+    Calculate the baseflow using the runoff ratio and the surface runoff
+    '''
+    Qgw = Qsw/qratio_m - Qsw
 
+    # fixing negative values when Qsw is 0
+    Qgw[Qgw<0]=0
+    
+    return Qgw
 
 def baseflow_function(q0, args):
     '''

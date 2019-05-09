@@ -14,7 +14,7 @@ import numpy as np
 import pandas as pd
 import netCDF4
 from wa_wb.functions import (lai_and_soil_calculations, SCS_surface_runoff, 
-                             baseflow_calculation, SCS_surface_runoff_gr, total_supply,interpolate_nan)
+                             baseflow_calculation, SCS_surface_runoff_gr, total_supply,interpolate_nan,baseflow_mcalculation)
 
 def run(input_nc, output_nc, rootdepth_par = 1.1,
         wateryear = ['0101','1231'], filter_par=0.5, min_qratio=0.40, log=True):
@@ -127,6 +127,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     thetasat_fv = ncv['SaturatedWaterContent']._FillValue
     rootdepth_fv = ncv['RootDepth']._FillValue
     interception_fv = ncv['Interception_M']._FillValue
+    qratio_m_fv = ncv['RunoffRatio_M']._FillValue
     #Data
     lu = np.array(ncv['LandUse'][:, :])
     p = np.array(ncv['Precipitation_M'][:, :, :])
@@ -140,7 +141,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     thetasat = np.array(ncv['SaturatedWaterContent'][:, :])
     rootdepth = np.array(ncv['RootDepth'][:, :])
     interception = np.array(ncv['Interception_M'][:, :, :])
-    
+    qratio_m = np.array(ncv['RunoffRatio_M'][:, :, :])
     # Check for NoData values
     lu[np.isclose(lu, lu_fv)] = np.nan
     p[np.isclose(p, p_fv)] = np.nan
@@ -154,7 +155,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     thetasat[np.isclose(thetasat, thetasat_fv)] = np.nan
     rootdepth[np.isclose(rootdepth, rootdepth_fv)] = np.nan
     interception[np.isclose(interception, interception_fv)] = np.nan
-
+    qratio_m[np.isclose(qratio_m, qratio_m_fv)] = np.nan
     ### Create output NetCDF variables:
 
     #Blue ET (monthly)
@@ -323,7 +324,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     
     # corrected qratio_y
     qratio_y_corr_var = out_nc.createVariable('Qratio_cor', 'f4',
-                                           ('latitude', 'longitude'),
+                                           ('time_yyyy', 'latitude', 'longitude'),
                                            fill_value=-9999)
     rootdepth_var.long_name = 'Q ratio corrected'
     rootdepth_var.units = 'mm'
@@ -360,12 +361,14 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
             phi=np.where((p[ti]==0)&(Stemp<0),0,np.where((p[ti]==0)|(Stemp<0),etp[ti]/(p[ti]+S[ti-1]),etp[ti]/p[ti]))
             budyko = np.where(phi==0,0,scale * np.sqrt(phi*np.tanh(1/phi)*(1-np.exp(-phi))))
             etg[ti] = np.where((p[ti]==0)|(Stemp<0),np.minimum(budyko*(p[ti]+S[ti-1]),et[ti]),np.minimum(budyko*p[ti],et[ti]))
+            etg[np.isnan(etg)]=0 ##fix erro ETg = no data
     etb=et-etg
     etb_var[:,:,:]=etb
     etg_var[:,:,:]=etg                                         
     ### Water Balance calculation
     #Limiting minimum Runoff Ratio
-    qratio_y[qratio_y<min_qratio]=min_qratio
+#    qratio_y[qratio_y<min_qratio]=min_qratio
+    qratio_y=qratio_y*min_qratio
         
     for yyyy in years_ls:
         print '\tyear: {0}'.format(yyyy)
@@ -382,6 +385,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         I=interception[ti1:ti2, :, :]
         THETArz=thetarz[ti1:ti2, :, :]
         Qratio=qratio_y[yyyyi,: ,:]
+        Qratiom=qratio_m[ti1:ti2, :, :]
         
         # Check P-ET-dsm
         p_et_dsm = np.sum(P, axis=0) - np.sum(ET, axis=0) - np.sum(DSM, axis=0)
@@ -397,7 +401,9 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         Qsw_gr = np.where(P==0, 0, Qsw_gr) # if rain = 0 --> Qsw_gr=0
         Qsw_gr = np.where(ETB==0, Qsw_gr, 0)  # if ETblue != 0 -->  incr_Qsw = Qsw (otherwise I mess up delta Qsw)
         #SCS equation for total surface runoff
-        Qsw= SCS_surface_runoff(P, supply, I, rootdepth, thetasat, THETArz)
+        effective_supply=supply-ETB
+        Qsw= SCS_surface_runoff(P, effective_supply, I, rootdepth, thetasat, THETArz)
+#        Qsw= SCS_surface_runoff(P, supply, I, rootdepth, thetasat, THETArz)
         Qsw = np.where(np.logical_and(P==0, supply==ETB), 0, Qsw) # if rain = 0 and supply = to ETb --> Qsw = 0
       
    
@@ -414,8 +420,10 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         incr_perc[incr_perc<0]=0 # I'm not sure this should only be positive...
         
         #Step 5: Estimate base flow using runoff ratio
-        Qgw_gr = baseflow_calculation(Qsw_gr, filter_par, Qratio)
-        Qgw = baseflow_calculation(Qsw, filter_par, Qratio)
+#        Qgw_gr = baseflow_calculation(Qsw_gr, filter_par, Qratio)
+#        Qgw = baseflow_calculation(Qsw, filter_par, Qratio)
+        Qgw_gr = baseflow_mcalculation(Qsw_gr, Qratiom)
+        Qgw = baseflow_mcalculation(Qsw, Qratiom)        
         incr_Qgw = Qgw - Qgw_gr
         incr_Qgw[incr_Qgw<0]=0
         incr_Q = incr_Qsw + incr_Qgw
@@ -433,7 +441,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         incss_var[ti1:ti2, :, :] = incr_Q
         incper_var[ti1:ti2,:, :] = incr_perc
         rootdepth_var[:, :] = rootdepth
-        qratio_y_corr_var[:,:] = Qratio      
+        qratio_y_corr_var[yyyyi,:,:] = Qratio      
                 
     
     ### Calculate yearly variables
