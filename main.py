@@ -324,7 +324,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     rootdepth_var.grid_mapping = 'crs'
     
     # corrected qratio_y
-    qratio_y_corr_var = out_nc.createVariable('Qratio_cor', 'f4',
+    qratio_y_corr_var = out_nc.createVariable('Qratio_cor_Y', 'f4',
                                            ('time_yyyy', 'latitude', 'longitude'),
                                            fill_value=-9999)
     rootdepth_var.long_name = 'Q ratio corrected'
