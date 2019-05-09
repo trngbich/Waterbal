@@ -94,6 +94,13 @@ def baseflow_calculation(Qsw, filter_par, qratio_y):
     
     return Qgw
 
+def adjQratio(P,ET,Qsw):
+    p_total=np.nansum(P)
+    et_total=np.nansum(ET)
+    Qsw_total=np.nansum(Qsw)
+    qratio_adj= Qsw_total/(p_total-et_total)
+    return qratio_adj
+
 def baseflow_mcalculation(Qsw, qratio_m):
     '''
     Calculate the baseflow using the runoff ratio and the surface runoff

@@ -13,7 +13,7 @@ import datetime as dt
 import numpy as np
 import pandas as pd
 import netCDF4
-from wa_wb.functions import (lai_and_soil_calculations, SCS_surface_runoff, 
+from wa_wb.functions import (lai_and_soil_calculations, SCS_surface_runoff, adjQratio,
                              baseflow_calculation, SCS_surface_runoff_gr, total_supply,interpolate_nan,baseflow_mcalculation)
 
 def run(input_nc, output_nc, rootdepth_par = 1.1,
@@ -420,8 +420,9 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         incr_perc[incr_perc<0]=0 # I'm not sure this should only be positive...
         
         #Step 5: Estimate base flow using runoff ratio
-        Qgw_gr = baseflow_calculation(Qsw_gr, filter_par, Qratio)
-        Qgw = baseflow_calculation(Qsw, filter_par, Qratio)
+        qratio_adj=adjQratio(P,ET,Qsw)
+        Qgw_gr = baseflow_calculation(Qsw_gr, filter_par, qratio_adj)
+        Qgw = baseflow_calculation(Qsw, filter_par, qratio_adj)
 #        Qgw_gr = baseflow_mcalculation(Qsw_gr, Qratiom)
 #        Qgw = baseflow_mcalculation(Qsw, Qratiom)        
         incr_Qgw = Qgw - Qgw_gr
