@@ -82,12 +82,13 @@ def baseflow_calculation(Qsw, filter_par, qratio_y):
     '''
     Calculate the baseflow using the runoff ratio and the surface runoff
     '''
-    Qgw_tot = np.nansum(Qsw/qratio_y-Qsw)
-    q0 = fsolve(baseflow_function, 0.0, [Qsw, filter_par,
-                                         qratio_y, Qgw_tot, True])
-    
-    Qgw = baseflow_function(q0, [Qsw, filter_par,
-                                        qratio_y, Qgw_tot, False])
+#    Qgw_tot = np.nansum(Qsw/qratio_y-Qsw)
+#    q0 = fsolve(baseflow_function, 0.0, [Qsw, filter_par,
+#                                         qratio_y, Qgw_tot, True])
+#    
+#    Qgw = baseflow_function(q0, [Qsw, filter_par,
+#                                        qratio_y, Qgw_tot, False])
+    Qgw=Qsw/qratio_y - Qsw
     # fixing negative values when Qsw is 0
     Qgw[Qgw<0]=0
     

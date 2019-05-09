@@ -420,10 +420,10 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         incr_perc[incr_perc<0]=0 # I'm not sure this should only be positive...
         
         #Step 5: Estimate base flow using runoff ratio
-#        Qgw_gr = baseflow_calculation(Qsw_gr, filter_par, Qratio)
-#        Qgw = baseflow_calculation(Qsw, filter_par, Qratio)
-        Qgw_gr = baseflow_mcalculation(Qsw_gr, Qratiom)
-        Qgw = baseflow_mcalculation(Qsw, Qratiom)        
+        Qgw_gr = baseflow_calculation(Qsw_gr, filter_par, Qratio)
+        Qgw = baseflow_calculation(Qsw, filter_par, Qratio)
+#        Qgw_gr = baseflow_mcalculation(Qsw_gr, Qratiom)
+#        Qgw = baseflow_mcalculation(Qsw, Qratiom)        
         incr_Qgw = Qgw - Qgw_gr
         incr_Qgw[incr_Qgw<0]=0
         incr_Q = incr_Qsw + incr_Qgw
