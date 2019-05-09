@@ -31,7 +31,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     '''
     Executes the main module of WAWB
     '''
-    ### Read inputs
+### Read inputs
     started = dt.datetime.now()
     print 'Reading input netcdf ...'
     inp_nc = netCDF4.Dataset(input_nc, 'r')
@@ -68,7 +68,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
                                       time_indeces[key][-1] + 1):
             raise Exception('The year {0} in the netcdf file is incomplete'
                             ' or the dates are non-consecutive')
-    ### Create dimension variables of ouput NetCDF 
+### Create dimension variables of ouput NetCDF 
     print 'Creating output netcdf ...'
     out_nc = netCDF4.Dataset(output_nc, 'w', format="NETCDF4")
     std_fv = -9999
@@ -113,7 +113,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     time_var[:] = time_ls
     year_var[:] = years_ls
 
-    ### Read input variables
+### Read input variables
     # FillValues
     lu_fv = ncv['LandUse']._FillValue
     p_fv = ncv['Precipitation_M']._FillValue
@@ -156,7 +156,8 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     rootdepth[np.isclose(rootdepth, rootdepth_fv)] = np.nan
     interception[np.isclose(interception, interception_fv)] = np.nan
     qratio_m[np.isclose(qratio_m, qratio_m_fv)] = np.nan
-    ### Create output NetCDF variables:
+
+### Create output NetCDF variables:
 
     #Blue ET (monthly)
     etb_var = out_nc.createVariable('ETBlue_M', 'f4',
@@ -331,16 +332,18 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
     rootdepth_var.grid_mapping = 'crs'
     
     
-    ### ET green/blue calculation  
+
+    # filling gaps in LAI
+    lai = np.nan_to_num(lai) #interpolating gaps before creating input ncdf
+### Step 0: Calculate change in rootdepth soil moisture storage
+    thetarz, thetarzo, thetarzx, dsm = lai_and_soil_calculations(thetasat, lai, swi, swio, swix, rootdepth)    
+    #swix = swio of the following month
+### Step 1: ET green/blue calculation  
 
     # calibrating parameter rootdepth_par
     rootdepth = rootdepth*rootdepth_par
     #maximum storage in unsaturated zone
     Smax=thetasat*rootdepth
-    # filling gaps in LAI
-    lai = np.nan_to_num(lai) #interpolating gaps before creating input ncdf
-    # Step 1: Calculate change in rootdepth soil moisture storage
-    thetarz, thetarzo, thetarzx, dsm = lai_and_soil_calculations(thetasat, lai, swi, swio, swix, rootdepth)    
     
     #first month according to hydrological year
     t0=time_indeces[years_ls[0]][0]
@@ -390,10 +393,10 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         # Check P-ET-dsm
         p_et_dsm = np.sum(P, axis=0) - np.sum(ET, axis=0) - np.sum(DSM, axis=0)
         
-        # Step 2: simple supply comuptation based on blue ET and LU
+### Step 2: simple supply comuptation based on blue ET and LU
         supply = total_supply(ETB, lu)
         
-        # Step 3: Estimate Surface runoff
+### Step 3: Estimate Surface runoff
         Qsw_gr = np.zeros(np.shape(ET))
         Qsw = np.zeros(np.shape(ET))
         #SCS equation for 'rainfall' surface runoff
@@ -411,7 +414,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         incr_Qsw = Qsw-Qsw_gr
         incr_Qsw[incr_Qsw<0]=0
         
-        #Step 4: Estimate Percolation        
+### Step 4: Estimate Percolation        
         perc_gr = P-ETG-DSM-Qsw_gr
         # otherwise I mess up delta perc
         perc_gr = np.where(ETB==0, perc_gr, 0)
@@ -419,10 +422,10 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         incr_perc = perc-perc_gr
         incr_perc[incr_perc<0]=0 # I'm not sure this should only be positive...
         
-        #Step 5: Estimate base flow using runoff ratio
-        qratio_adj=adjQratio(P,ET,Qsw)
-        Qgw_gr = baseflow_calculation(Qsw_gr, filter_par, qratio_adj)
-        Qgw = baseflow_calculation(Qsw, filter_par, qratio_adj)
+### Step 5: Estimate base flow using runoff ratio
+        qratio_adj=adjQratio(P,ET,Qsw,min_qratio)
+        Qgw_gr = baseflow_mcalculation(Qsw_gr, qratio_adj)
+        Qgw = baseflow_mcalculation(Qsw, qratio_adj)
 #        Qgw_gr = baseflow_mcalculation(Qsw_gr, Qratiom)
 #        Qgw = baseflow_mcalculation(Qsw, Qratiom)        
         incr_Qgw = Qgw - Qgw_gr
@@ -430,7 +433,7 @@ def run(input_nc, output_nc, rootdepth_par = 1.1,
         incr_Q = incr_Qsw + incr_Qgw
         Qtot = Qsw+Qgw
         
-        ### Store values in output NetCDF
+### Store values in output NetCDF
         
         ss_var[ti1:ti2, :, :] = Qsw
         bf_var[ti1:ti2, :, :] = Qgw
