@@ -141,7 +141,7 @@ def get_sheet4_6_classes(version = '1.0'):
     'Aquaculture':          [65],
     'Residential':          [47, 66, 68, 72],
     'Greenhouses':          [64],
-    'Other':                [68,69,70,71,76,78]}
+    'Other':                [68,69,70,71,76,78,73,67]}
     
     return lucs[version]
 
