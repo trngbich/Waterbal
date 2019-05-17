@@ -344,11 +344,13 @@ def BFratio_y(P,ETa,Qsupply_sw,SRO,dS):
     P, ETa, SRO, Qsupply_sw (12xNxM) (mm)
     dS (1) [mm/year]
     '''            
-    Pavg=np.nanmean(P)
-    ETavg=np.nanmean(ETa)
-    SROavg=np.nanmean(SRO)
-    Supply_SWavg=np.nanmean(Qsupply_sw)
-    BFratio=((Pavg-ETavg-dS)-SROavg+Supply_SWavg)/Supply_SWavg    
+    Pavg=np.nanmean(12*np.nanmean(P,axis=0))
+    ETavg=np.nanmean(12*np.nanmean(ETa,axis=0))
+    SROavg=np.nanmean(12*np.nanmean(SRO,axis=0))
+    Supply_SWavg=np.nanmean(12*np.nanmean(Qsupply_sw,axis=0))
+    BFratio=((Pavg-ETavg-dS)+Supply_SWavg-SROavg)/SROavg
+    print 'check shape P: {0}, ET: {1}, Qsro: {2}, Qsupply_sw: {3}'.format(P.shape,ETa.shape,SRO.shape,Qsupply_sw.shape)
+    print 'P: {0}, ET: {1}, dS: {2}, Qsupply_sw: {3}, Qsro: {4}'.format(Pavg,ETavg,dS,Supply_SWavg,SROavg)
     return BFratio            
             
 def SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed):
@@ -359,8 +361,10 @@ def SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed):
     ETincr=np.where(SMtemp-ETr>0,0,ETr-SMtemp)
     Qsupply=np.where(SMtemp-ETr>0,0,(ETincr-SMincrt_1)/f_consumed)            
     SMincr=np.where(ETincr>SMincrt_1,SMincrt_1+Qsupply-ETincr,SMincrt_1-ETincr)
-    SM=np.where(SMg+SMincr>SMmax,SMmax,SMg+SMincr)
-    SMg=np.where(SMg+SMincr>SMmax,SMg-(SMmax-(SMg+SMincr)),SMg)
+    SMsum=SMg+SMincr
+    SM=np.where(SMsum>SMmax,SMmax,SMsum)
+    SMg=np.where(SMsum>SMmax,SMg-(SMmax-SMsum)*(SMg/SMsum),SMg)
+    SMincr=np.where(SMsum>SMmax,SMincr-(SMmax-SMsum)*(SMincr/SMsum),SMincr)
     dsm=SM-SMt_1
     ETg=ETa-ETincr
     return SMg,SMincr,SM,dsm,Qsupply,ETincr,ETg
