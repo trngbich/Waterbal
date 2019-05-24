@@ -301,10 +301,10 @@ def run(input_nc, output_nc, rootdepth_par = 1,
 ### Step 1: Soil moisture
             SMg,SMincr,SM,dsm,Qsupply,ETincr,ETg=SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed)    
 ### Step 2: SRO
-            SRO,SROincr=SCS_calc_SRO(P,I,SMmax,SM,Qsupply)
+            SRO,SROincr=SCS_calc_SRO(P,ETa,ETg,SMmax,SM,Qsupply)
 ### Step 3: Percolation
-            Qperc=np.where((P+Qsupply)>(ETa+dsm+SRO),(P+Qsupply)-(ETa+dsm+SRO),0)
-            Qperc_incr=np.where(Qsupply>(SROincr+ETincr),Qsupply-(SROincr+ETincr),0)
+            Qperc=np.where((P+Qsupply)>(ETa+dsm+SRO),(P+Qsupply)-(ETa+dsm+SRO),(P+Qsupply)-(ETa+dsm+SRO))
+            Qperc_incr=np.where(Qsupply>(SROincr+ETincr),Qsupply-(SROincr+ETincr),(P+Qsupply)-(ETa+dsm+SRO))
 ### Step 4: Split Qsupply 
             QsupplySW = Qsupply*SWSupplyFrac
             QsupplyGW = Qsupply - QsupplySW 
@@ -321,6 +321,8 @@ def run(input_nc, output_nc, rootdepth_par = 1,
             etb_var[t,:,:]=ETincr
             etg_var[t,:,:]=ETg
 ### Step 6: Estimate qratio and BF from yearly SRO
+        Qper_avg=np.nanmean(12*np.nanmean(per_var[ti1:ti2,:,:],axis=0))
+        print 'Annual Qperc: {}'.format(Qper_avg)
         dS=float(dfS.loc[dfS['year']==yyyy]['dS[mm]'])
         P=p[ti1:ti2,:,:]
         ETa=et[ti1:ti2,:,:]
@@ -369,10 +371,10 @@ def SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed):
     ETg=ETa-ETincr
     return SMg,SMincr,SM,dsm,Qsupply,ETincr,ETg
         
-def SCS_calc_SRO(P,I,SMmax,SM,Qsupply):    
+def SCS_calc_SRO(P,ETa,ETg,SMmax,SM,Qsupply):    
     SM=np.where(SM>SMmax,SMmax,SM)        
-    SRO= ((P-I+Qsupply)**2)/(P-I+Qsupply+(SMmax-SM))
-    SROg= ((P-I)**2)/(P-I+(SMmax-SM))
+    SRO= ((P-ETa+Qsupply)**2)/(P-ETa+Qsupply+(SMmax-SM))
+    SROg= ((P-ETg)**2)/(P-ETg+(SMmax-SM))
     SROincr=SRO-SROg
     return SRO,SROincr
 
