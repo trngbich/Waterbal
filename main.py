@@ -46,12 +46,14 @@ def run(input_nc, output_nc, rootdepth_par = 1,
                for i in time_ls]
     time_n = len(time_ls)
     years_ls = set()
+    
     if wateryear == ['0101','1231']:
         years_ls = [i.year for i in time_dt
                     if i.year not in years_ls and not years_ls.add(i.year)]        
     else:
         years_ls = [i.year for i in time_dt
                     if i.year not in years_ls and not years_ls.add(i.year)][:-1]
+    
     years_n = len(years_ls)
     time_indeces = {}
     for j in range(years_n):
@@ -120,6 +122,7 @@ def run(input_nc, output_nc, rootdepth_par = 1,
     rootdepth_fv = ncv['RootDepth']._FillValue
     interception_fv = ncv['Interception_M']._FillValue
     SWSupplyFrac_fv= ncv['SWSupplyFrac']._FillValue
+    nRD_fv= ncv['nRD_M']._FillValue
 
     #Data
     lu = np.array(ncv['LandUse'][:, :])
@@ -130,6 +133,8 @@ def run(input_nc, output_nc, rootdepth_par = 1,
     rootdepth = np.array(ncv['RootDepth'][:, :])
     interception = np.array(ncv['Interception_M'][:, :, :])
     SWSupplyFrac= np.array(ncv['SWSupplyFrac'][:,:])
+    nRD= np.array(ncv['nRD_M'][:,:])
+
 
     # Check for NoData values
     lu[np.isclose(lu, lu_fv)] = np.nan
@@ -140,6 +145,7 @@ def run(input_nc, output_nc, rootdepth_par = 1,
     rootdepth[np.isclose(rootdepth, rootdepth_fv)] = np.nan
     interception[np.isclose(interception, interception_fv)] = np.nan
     SWSupplyFrac[np.isclose(SWSupplyFrac, SWSupplyFrac_fv)] = np.nan
+    nRD[np.isclose(nRD, nRD_fv)] = np.nan
 
 ### Create output NetCDF variables:
 
@@ -231,7 +237,7 @@ def run(input_nc, output_nc, rootdepth_par = 1,
     # Root depth soil moisture (monthly)
     rdsm_var = out_nc.createVariable('RootDepthSoilMoisture_M', 'f4',
                                      ('time_yyyymm', 'latitude', 'longitude'),
-                                     fill_value=rootdepth_fv)
+                                     fill_value=-9999)
     rdsm_var.long_name = 'Root depth soil moisture'
     rdsm_var.units = 'cm3/cm3'
     rdsm_var.grid_mapping = 'crs'
@@ -280,17 +286,21 @@ def run(input_nc, output_nc, rootdepth_par = 1,
     sm_g=et*0
     sm_b=et*0
     f_consumed = Consumed_fraction(lu)
+    import calendar
     for yyyy in years_ls:
         print '\tyear: {0}'.format(yyyy)
         yyyyi = years_ls.index(yyyy)
         ti1 = time_indeces[yyyy][0]
         ti2 = time_indeces[yyyy][-1] + 1
         for t in time_indeces[yyyy]:
-            print '\tMonth: {0}'.format(time_ls[t])
+            dm = calendar.monthrange(yyyy,time_ls[t]%100)[1]
+            print '\tMonth: {0}\tdays: {1}'.format(time_ls[t],dm)
 ### Step 0: Get data of the month and previous month
-            P = p[t,:,:]
-            ETa=et[t,:,:]
-            I=interception[t,:,:]
+            nrd=np.where(nRD[t,:,:]>0,nRD[t,:,:],1)
+            
+            P = p[t,:,:]/nrd
+            ETa=et[t,:,:]/nrd
+            I=interception[t,:,:]/nrd
             if t==0:
                 SMgt_1=ETa*0
                 Qsupply=ETa*0
@@ -301,29 +311,43 @@ def run(input_nc, output_nc, rootdepth_par = 1,
 ### Step 1: Soil moisture
             SMg,SMincr,SM,dsm,Qsupply,ETincr,ETg=SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed)    
 ### Step 2: SRO
-            SRO,SROincr=SCS_calc_SRO(P,ETa,ETg,SMmax,SM,Qsupply)
+            cf = 1  #soil mositure correction factor to componsate the variation in filling up and drying in a month
+            SRO,SROincr=SCS_calc_SRO(P,I,ETa,SMmax,SM,Qsupply, cf)
 ### Step 3: Percolation
-            Qperc=np.where((P+Qsupply)>(ETa+dsm+SRO),(P+Qsupply)-(ETa+dsm+SRO),(P+Qsupply)-(ETa+dsm+SRO))
-            Qperc_incr=np.where(Qsupply>(SROincr+ETincr),Qsupply-(SROincr+ETincr),(P+Qsupply)-(ETa+dsm+SRO))
+            k=50 # percolation factor
+            
+            perc_fromSM=np.where(SM>0.6*SMmax,(1-np.exp(-k/SM)),P*0)
+            SM = SM - perc_fromSM
+            SMt_1= SMgt_1+SMincrt_1
+            dsm = SM-SMt_1
+            diff = P+Qsupply-ETa-dsm-SRO
+            #SRO=np.where(diff>0,0,P+Qsupply-ETa-dsm)
+                             
+            
+            Qperc=np.where(diff>perc_fromSM,diff,perc_fromSM)
+            #Qperc=np.where((P+Qsupply)>(ETa+dsm+SRO),(P+Qsupply)-(ETa+dsm+SRO),0)
+            Qperc_incr=np.where(Qsupply>(SROincr+ETincr),Qsupply-(SROincr+ETincr),P*0)
+            #dsm = dsm *(1-np.exp(-k/dsm))
 ### Step 4: Split Qsupply 
             QsupplySW = Qsupply*SWSupplyFrac
             QsupplyGW = Qsupply - QsupplySW 
 ### Step 5: Store monthly data of the year
-            sr_var[t,:,:]=SRO
-            incsr_var[t,:,:]=SROincr
+            sr_var[t,:,:]=SRO*nrd
+            incsr_var[t,:,:]=SROincr*nrd
             dsm_var[t,:,:]=dsm
-            per_var[t,:,:]=Qperc
-            incper_var[t,:,:]=Qperc_incr            
-            sup_var[t,:,:]=Qsupply
-            supsw_var[t,:,:]=QsupplySW
-            supgw_var[t,:,:]=QsupplyGW
+            per_var[t,:,:]=Qperc*nrd
+            incper_var[t,:,:]=Qperc_incr*nrd           
+            sup_var[t,:,:]=Qsupply*nrd
+            supsw_var[t,:,:]=QsupplySW*nrd
+            supgw_var[t,:,:]=QsupplyGW*nrd
             rootdepth_var[:,:]=Rd
-            etb_var[t,:,:]=ETincr
-            etg_var[t,:,:]=ETg
+            etb_var[t,:,:]=ETincr*nrd
+            etg_var[t,:,:]=ETg*nrd
+            rdsm_var[t,:,:]=SMg
+            sm_g[t,:,:]=SMg
 ### Step 6: Estimate qratio and BF from yearly SRO
-        Qper_avg=np.nanmean(12*np.nanmean(per_var[ti1:ti2,:,:],axis=0))
-        print 'Annual Qperc: {}'.format(Qper_avg)
         dS=float(dfS.loc[dfS['year']==yyyy]['dS[mm]'])
+        #dS=dsm_var[ti1:ti2,:,:]
         P=p[ti1:ti2,:,:]
         ETa=et[ti1:ti2,:,:]
         SRO=sr_var[ti1:ti2,:,:]
@@ -346,35 +370,41 @@ def BFratio_y(P,ETa,Qsupply_sw,SRO,dS):
     P, ETa, SRO, Qsupply_sw (12xNxM) (mm)
     dS (1) [mm/year]
     '''            
-    Pavg=np.nanmean(12*np.nanmean(P,axis=0))
-    ETavg=np.nanmean(12*np.nanmean(ETa,axis=0))
-    SROavg=np.nanmean(12*np.nanmean(SRO,axis=0))
-    Supply_SWavg=np.nanmean(12*np.nanmean(Qsupply_sw,axis=0))
-    BFratio=((Pavg-ETavg-dS)+Supply_SWavg-SROavg)/SROavg
-    print 'check shape P: {0}, ET: {1}, Qsro: {2}, Qsupply_sw: {3}'.format(P.shape,ETa.shape,SRO.shape,Qsupply_sw.shape)
-    print 'P: {0}, ET: {1}, dS: {2}, Qsupply_sw: {3}, Qsro: {4}'.format(Pavg,ETavg,dS,Supply_SWavg,SROavg)
+    Pavg=np.nanmean(P)
+    ETavg=np.nanmean(ETa)
+    SROavg=np.nanmean(SRO)
+    Supply_SWavg=np.nanmean(Qsupply_sw)
+    dSavg=np.nanmean(dS)
+    print(Pavg,ETavg,dS)
+    print((Pavg-ETavg-dSavg + Supply_SWavg),SROavg,Supply_SWavg)
+    #BFratio=((Pavg-ETavg-dS)-SROavg+Supply_SWavg)/Supply_SWavg 
+    #BFratio=((Pavg-ETavg-dSavg)+Supply_SWavg)/SROavg  
+    BFratio=((Pavg-ETavg-dSavg)+Supply_SWavg)/SROavg  
     return BFratio            
             
 def SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed):
     SMt_1=SMgt_1+SMincrt_1
-    ETr=ETa-I
+    ETr=np.where(I>0,ETa-I, ETa)
     SMtemp=SMgt_1+np.maximum(P-I,P*0)
-    SMg=np.where(SMtemp-ETr>0,SMtemp-ETr,0)
-    ETincr=np.where(SMtemp-ETr>0,0,ETr-SMtemp)
-    Qsupply=np.where(SMtemp-ETr>0,0,(ETincr-SMincrt_1)/f_consumed)            
-    SMincr=np.where(ETincr>SMincrt_1,SMincrt_1+Qsupply-ETincr,SMincrt_1-ETincr)
-    SMsum=SMg+SMincr
-    SM=np.where(SMsum>SMmax,SMmax,SMsum)
-    SMg=np.where(SMsum>SMmax,SMg-(SMmax-SMsum)*(SMg/SMsum),SMg)
-    SMincr=np.where(SMsum>SMmax,SMincr-(SMmax-SMsum)*(SMincr/SMsum),SMincr)
+    SMg=np.where(SMtemp-ETr>0,SMtemp-ETr,P*0)
+    ETincr=np.where(SMtemp-ETr>0,P*0,ETr-SMtemp)
+    Qsupply=np.where(ETincr>SMincrt_1,(ETincr-SMincrt_1)/f_consumed, P*0) 
+            
+    #SMincr=np.where(ETincr>SMincrt_1,SMincrt_1+Qsupply-ETincr,SMincrt_1-ETincr)
+    SMincr=SMincrt_1+Qsupply-ETincr
+    SMincr=np.where(SMg+SMincr>SMmax,SMincr-SMincr/(SMg+SMincr)*((SMg+SMincr)-SMmax),SMincr)     
+    SMg=np.where(SMg+SMincr>SMmax,SMg-SMg/(SMg+SMincr)*((SMg+SMincr)-SMmax),SMg)
+    
+    #SMincr=np.where(SMg+SMincr>SMmax,SMincr-((SMg+SMincr)-SMmax),SMincr)
+    SM=np.where(SMg+SMincr>SMmax,SMmax,SMg+SMincr)
     dsm=SM-SMt_1
     ETg=ETa-ETincr
     return SMg,SMincr,SM,dsm,Qsupply,ETincr,ETg
         
-def SCS_calc_SRO(P,ETa,ETg,SMmax,SM,Qsupply):    
+def SCS_calc_SRO(P,I,ETa,SMmax,SM,Qsupply, cf):    
     SM=np.where(SM>SMmax,SMmax,SM)        
-    SRO= ((P-ETa+Qsupply)**2)/(P-ETa+Qsupply+(SMmax-SM))
-    SROg= ((P-ETg)**2)/(P-ETg+(SMmax-SM))
+    SRO= np.where((P-I+Qsupply)>0,((P-I+Qsupply)**2)/(P-I+Qsupply+cf*(SMmax-SM)),P*0)
+    SROg= np.where(P-I>0,((P-I)**2)/(P-I+cf*(SMmax-SM)),P*0)
     SROincr=SRO-SROg
     return SRO,SROincr
 
