@@ -370,17 +370,14 @@ def BFratio_y(P,ETa,Qsupply_sw,SRO,dS):
     P, ETa, SRO, Qsupply_sw (12xNxM) (mm)
     dS (1) [mm/year]
     '''            
-    Pavg=np.nanmean(P)
-    ETavg=np.nanmean(ETa)
-    SROavg=np.nanmean(SRO)
-    Supply_SWavg=np.nanmean(Qsupply_sw)
-    dSavg=np.nanmean(dS)
-    print(Pavg,ETavg,dS)
-    print((Pavg-ETavg-dSavg + Supply_SWavg),SROavg,Supply_SWavg)
-    #BFratio=((Pavg-ETavg-dS)-SROavg+Supply_SWavg)/Supply_SWavg 
-    #BFratio=((Pavg-ETavg-dSavg)+Supply_SWavg)/SROavg  
-    BFratio=((Pavg-ETavg-dSavg)+Supply_SWavg)/SROavg  
-    return BFratio            
+    Pavg=np.nanmean(12*np.nanmean(P,axis=0))
+    ETavg=np.nanmean(12*np.nanmean(ETa,axis=0))
+    SROavg=np.nanmean(12*np.nanmean(SRO,axis=0))
+    Supply_SWavg=np.nanmean(12*np.nanmean(Qsupply_sw,axis=0))
+    BFratio=((Pavg-ETavg-dS)+Supply_SWavg-SROavg)/SROavg
+    print 'check shape P: {0}, ET: {1}, Qsro: {2}, Qsupply_sw: {3}'.format(P.shape,ETa.shape,SRO.shape,Qsupply_sw.shape)
+    print 'P: {0}, ET: {1}, dS: {2}, Qsupply_sw: {3}, Qsro: {4}'.format(Pavg,ETavg,dS,Supply_SWavg,SROavg)
+    return BFratio           
             
 def SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed):
     SMt_1=SMgt_1+SMincrt_1
