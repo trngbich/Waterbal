@@ -356,8 +356,8 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
             sr_var[t,:,:]=SRO*nrd
             incsr_var[t,:,:]=SROincr*nrd
             dsm_var[t,:,:]=dsm
-            per_var[t,:,:]=Qperc*nrd
-            incper_var[t,:,:]=Qperc_incr   *nrd        
+            per_var[t,:,:]=Qperc #*nrd
+            incper_var[t,:,:]=Qperc_incr #*nrd        
             sup_var[t,:,:]=Qsupply*nrd
             supsw_var[t,:,:]=QsupplySW*nrd
             supgw_var[t,:,:]=QsupplyGW*nrd
