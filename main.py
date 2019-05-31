@@ -13,7 +13,7 @@ import get_dictionaries as gd
 import numpy.ma as ma
 from matplotlib import pyplot as plt
 
-def run(input_nc, output_nc, rootdepth_par = 1,
+def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
         wateryear = ['0101','1231'], dS_GRACE=None, log=True):
     if log:
         fn=output_nc.replace('.nc','.txt')
@@ -21,6 +21,8 @@ def run(input_nc, output_nc, rootdepth_par = 1,
         f.write('input_nc: {0} \n'.format(input_nc))
         f.write('output_nc: {0} \n'.format(output_nc))
         f.write('rootdepth_par: {0} \n'.format(rootdepth_par))
+        f.write('cf: {0} \n'.format(cf))
+        f.write('perc_min_ratio: {0} \n'.format(perc_min_ratio))
         f.write('wateryear: {0} \n'.format(wateryear))
         f.write('dS_GRACE: {0} \n'.format(dS_GRACE))
        
@@ -298,7 +300,7 @@ def run(input_nc, output_nc, rootdepth_par = 1,
 
         for t in time_indeces[yyyy]:
             dm = calendar.monthrange(yyyy,time_ls[t]%100)[1]
-            print '\tMonth: {0}\tdays: {1}'.format(time_ls[t],dm)
+#            print '\tMonth: {0}\tdays: {1}'.format(time_ls[t],dm)
 ### Step 0: Get data of the month and previous month
             nrd=np.where(nRD[t,:,:]>0,nRD[t,:,:],1)
             #nrd=dm
@@ -317,12 +319,12 @@ def run(input_nc, output_nc, rootdepth_par = 1,
 ### Step 1: Soil moisture
             SMg,SMincr,SM,dsm,Qsupply,ETincr,ETg=SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed)    
 ### Step 2: SRO
-            cf =  12 #soil mositure correction factor to componsate the variation in filling up and drying in a month
+#            cf =  12 #soil mositure correction factor to componsate the variation in filling up and drying in a month
             SRO,SROincr=SCS_calc_SRO(P,I,SMmax,SM,Qsupply-ETincr,cf)
 ### Step 3: Percolation
             k=1 # percolation factor
             
-            perc=np.where(SM>0.3*SMmax,SM*(np.exp(-k/SM)),P*0)
+            perc=np.where(SM>perc_min_ratio*SMmax,SM*(np.exp(-k/SM)),P*0)
             #perc=P*0.0
             #SM = SM - perc_fromSM
             
@@ -338,12 +340,10 @@ def run(input_nc, output_nc, rootdepth_par = 1,
             
 						
             #diff = P+Qsupply-ETa-dsm-SRO
-            #SRO=np.where(diff>0,0,P+Qsupply-ETa-dsm)
-                             
+            #SRO=np.where(diff>0,0,P+Qsupply-ETa-dsm)                             
             
             Qperc=perc
             Qperc_incr=perc_incr
-
                 
             
             #Qperc=np.where((P+Qsupply)>(ETa+dsm+SRO),(P+Qsupply)-(ETa+dsm+SRO),0)
@@ -392,6 +392,7 @@ def run(input_nc, output_nc, rootdepth_par = 1,
     plt.plot(check_p_et_ds,label= 'P - Et- ds' )
     plt.plot(check_etb, label=' etb' )
     plt.legend()
+    plt.title(output_nc)
     plt.show()
 ### Finish
     print 'Closing netcdf...'
