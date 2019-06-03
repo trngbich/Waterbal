@@ -292,6 +292,9 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
     check_sro=[]
     check_p_et_ds=[]
     check_etb=[]
+    check_Qsup=[]
+    check_dS=[]
+    check_dSGW=[]
     for yyyy in years_ls:
         print '\tyear: {0}'.format(yyyy)
         yyyyi = years_ls.index(yyyy)
@@ -334,8 +337,9 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
             perc_incr = perc*SMincr_ratio
             
             SMg = SMg-perc_green
-            SMincr = SMincr-perc_incr
-            #SM = SMg+SMincr
+            SMincr = SMincr-perc_incr-SROincr
+            SMincr=np.where(SMincr<0,0,SMincr)
+            SM = SMg+SMincr
             #dsm = SM-(SMgt_1+SMincrt_1)
             
 						
@@ -375,6 +379,7 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
         ETa=et[ti1:ti2,:,:]
         SRO=sr_var[ti1:ti2,:,:]
         QsupplySW=supsw_var[ti1:ti2,:,:]  
+        QsupplyGW=supgw_var[ti1:ti2,:,:] 
         dSM=dsm_var[ti1:ti2,:,:] 
         BFratio,P_ET_dS=BFratio_y(P,ETa,QsupplySW,SRO,dS,dSM) 
         print('BF/SRO: {0}'.format(BFratio))
@@ -384,13 +389,31 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
         tr_var[ti1:ti2,:,:]=TR        
         
         SROavg=np.nanmean(12*np.nanmean(SRO,axis=0))
-        ETbavg=np.nanmean(12*np.nanmean(ETincr,axis=0))
+        BFavg=np.nanmean(12*np.nanmean(BF,axis=0))
+        ETbavg=np.nanmean(12*np.nanmean(etb_var[ti1:ti2,:,:],axis=0))
+        Qsupavg=np.nanmean(12*np.nanmean(sup_var[ti1:ti2,:,:],axis=0))
+        Qpercavg=np.nanmean(12*np.nanmean(per_var[ti1:ti2,:,:],axis=0))
+        dSGW=Qpercavg-QsupplyGW*1.01-BFavg
         check_sro.append(SROavg)
         check_p_et_ds.append(P_ET_dS)
         check_etb.append(ETbavg)
+        check_Qsup.append(Qsupavg)
+        check_dS.append(dS)
+        check_dSGW.append(dSGW)
     plt.plot(check_sro,label='SRO')
-    plt.plot(check_p_et_ds,label= 'P - Et- ds' )
+    plt.plot(check_p_et_ds,label= 'P - Et- ds' )  
+    plt.legend()
+    plt.title(output_nc)
+    plt.show()
+    ###
+    plt.plot(check_dS, label=' dSGrace' )
+    plt.plot(check_dSGW, label=' dSGW' )
+    plt.legend()
+    plt.title(output_nc)
+    plt.show()   
+    ###
     plt.plot(check_etb, label=' etb' )
+    plt.plot(check_Qsup, label=' Qsup' )
     plt.legend()
     plt.title(output_nc)
     plt.show()
