@@ -13,7 +13,7 @@ import get_dictionaries as gd
 import numpy.ma as ma
 from matplotlib import pyplot as plt
 
-def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
+def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
         wateryear = ['0101','1231'], dS_GRACE=None, log=True):
     if log:
         fn=output_nc.replace('.nc','.txt')
@@ -23,6 +23,7 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
         f.write('rootdepth_par: {0} \n'.format(rootdepth_par))
         f.write('cf: {0} \n'.format(cf))
         f.write('perc_min_ratio: {0} \n'.format(perc_min_ratio))
+        f.write('percolation k: {0} \n'.format(k))
         f.write('wateryear: {0} \n'.format(wateryear))
         f.write('dS_GRACE: {0} \n'.format(dS_GRACE))
        
@@ -292,6 +293,9 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
     check_sro=[]
     check_p_et_ds=[]
     check_etb=[]
+    check_dSgw=[]
+    check_dS=[]
+    check_qsup=[]
     for yyyy in years_ls:
         print '\tyear: {0}'.format(yyyy)
         yyyyi = years_ls.index(yyyy)
@@ -322,7 +326,7 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
 #            cf =  12 #soil mositure correction factor to componsate the variation in filling up and drying in a month
             SRO,SROincr=SCS_calc_SRO(P,I,SMmax,SM,Qsupply-ETincr,cf)
 ### Step 3: Percolation
-            k=1 # percolation factor
+             # percolation factor
             
             perc=np.where(SM>perc_min_ratio*SMmax,SM*(np.exp(-k/SM)),P*0)
             #perc=P*0.0
@@ -333,9 +337,11 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
             perc_green = perc*SMg_ratio
             perc_incr = perc*SMincr_ratio
             
-            SMg = SMg-perc_green
-            SMincr = SMincr-perc_incr
-            #SM = SMg+SMincr
+            SMg = SMg-perc_green-(SRO-SROincr)
+            SMincr = SMincr-perc_incr-SROincr
+            SMg=np.where(SMg<0,0,SMg)
+            SMincr=np.where(SMincr<0,0,SMincr)
+            SM = SMg+SMincr
             #dsm = SM-(SMgt_1+SMincrt_1)
             
 						
@@ -374,7 +380,8 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
         P=p[ti1:ti2,:,:]
         ETa=et[ti1:ti2,:,:]
         SRO=sr_var[ti1:ti2,:,:]
-        QsupplySW=supsw_var[ti1:ti2,:,:]  
+        QsupplySW=supsw_var[ti1:ti2,:,:]
+  
         dSM=dsm_var[ti1:ti2,:,:] 
         BFratio,P_ET_dS=BFratio_y(P,ETa,QsupplySW,SRO,dS,dSM) 
         print('BF/SRO: {0}'.format(BFratio))
@@ -384,13 +391,36 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
         tr_var[ti1:ti2,:,:]=TR        
         
         SROavg=np.nanmean(12*np.nanmean(SRO,axis=0))
-        ETbavg=np.nanmean(12*np.nanmean(ETincr,axis=0))
+        ETbavg=np.nanmean(12*np.nanmean(etb_var[t,:,:],axis=0))
+        Qsupavg=np.nanmean(12*np.nanmean(sup_var[t,:,:],axis=0))
+        #check GW balance
+        Qperc_avg=np.nanmean(12*np.nanmean(per_var[ti1:ti2,:,:],axis=0))
+        BF_avg=np.nanmean(12*np.nanmean(BF,axis=0))
+        Qsupgw=np.nanmean(12*np.nanmean(supgw_var[ti1:ti2,:,:],axis=0))
+        dSgw=Qperc_avg-BF_avg-Qsupgw*1.01
+        
         check_sro.append(SROavg)
         check_p_et_ds.append(P_ET_dS)
         check_etb.append(ETbavg)
+        check_qsup.append(Qsupavg)
+        check_dSgw.append(dSgw)
+        check_dS.append(dS)
+        
     plt.plot(check_sro,label='SRO')
     plt.plot(check_p_et_ds,label= 'P - Et- ds' )
+    
+    plt.legend()
+    plt.title(output_nc)
+    plt.show()
+    # plot GW storage change
+    plt.plot(check_dSgw,label='dS_GW')
+    plt.plot(check_dS, label='dS_GRACE')
+    plt.legend()
+    plt.title(output_nc)
+    plt.show()
+    
     plt.plot(check_etb, label=' etb' )
+    plt.plot(check_qsup, label=' Qsupply' )
     plt.legend()
     plt.title(output_nc)
     plt.show()
