@@ -393,7 +393,8 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
         ETbavg=np.nanmean(12*np.nanmean(etb_var[ti1:ti2,:,:],axis=0))
         Qsupavg=np.nanmean(12*np.nanmean(sup_var[ti1:ti2,:,:],axis=0))
         Qpercavg=np.nanmean(12*np.nanmean(per_var[ti1:ti2,:,:],axis=0))
-        dSGW=Qpercavg-QsupplyGW*1.01-BFavg
+        QsupplyGWavg=np.nanmean(12*np.nanmean(QsupplyGW,axis=0))
+        dSGW=Qpercavg-QsupplyGWavg*1.01-BFavg
         check_sro.append(SROavg)
         check_p_et_ds.append(P_ET_dS)
         check_etb.append(ETbavg)
