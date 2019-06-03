@@ -15,19 +15,7 @@ from matplotlib import pyplot as plt
 
 def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
         wateryear = ['0101','1231'], dS_GRACE=None, log=True):
-    if log:
-        fn=output_nc.replace('.nc','.txt')
-        f=open(fn,'w')
-        f.write('input_nc: {0} \n'.format(input_nc))
-        f.write('output_nc: {0} \n'.format(output_nc))
-        f.write('rootdepth_par: {0} \n'.format(rootdepth_par))
-        f.write('cf: {0} \n'.format(cf))
-        f.write('perc_min_ratio: {0} \n'.format(perc_min_ratio))
-        f.write('percolation k: {0} \n'.format(k))
-        f.write('wateryear: {0} \n'.format(wateryear))
-        f.write('dS_GRACE: {0} \n'.format(dS_GRACE))
-       
-        f.close()
+
     '''
     Executes the main module of WAWB
     '''
@@ -337,9 +325,8 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
             perc_green = perc*SMg_ratio
             perc_incr = perc*SMincr_ratio
             
-            SMg = SMg-perc_green-(SRO-SROincr)
+
             SMincr = SMincr-perc_incr-SROincr
-            SMg=np.where(SMg<0,0,SMg)
             SMincr=np.where(SMincr<0,0,SMincr)
             SM = SMg+SMincr
             #dsm = SM-(SMgt_1+SMincrt_1)
@@ -429,6 +416,20 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
     out_nc.close()
     ended=dt.datetime.now()
     print 'Time elapsed: {0}'.format(ended-started)
+    if log:
+        fn=output_nc.replace('.nc','.txt')
+        f=open(fn,'w')
+        f.write('Started at: {0} \n'.format(started))
+        f.write('Time elapsed: {0} \n'.format(ended-started))
+        f.write('input_nc: {0} \n'.format(input_nc))
+        f.write('output_nc: {0} \n'.format(output_nc))
+        f.write('rootdepth_par: {0} \n'.format(rootdepth_par))
+        f.write('cf: {0} \n'.format(cf))
+        f.write('perc_min_ratio: {0} \n'.format(perc_min_ratio))
+        f.write('percolation k: {0} \n'.format(k))
+        f.write('wateryear: {0} \n'.format(wateryear))
+        f.write('dS_GRACE: {0} \n'.format(dS_GRACE))   
+        f.close()
 #%% Functions        
 def BFratio_y(P,ETa,Qsupply_sw,SRO,dS,dsm):
     '''
@@ -454,7 +455,7 @@ def SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed):
     SMtemp=SMgt_1+np.maximum(P-I,P*0)
     SMg=np.where(SMtemp-ETr>0,SMtemp-ETr,P*0)
     ETincr=np.where(SMtemp-ETr>0,P*0,ETr-SMtemp)
-    Qsupply=np.where(ETincr>SMincrt_1,(ETincr-SMincrt_1)/f_consumed, P*0) 
+    Qsupply=np.where(ETincr>SMincrt_1,(ETincr-SMincrt_1)/f_consumed, P*0) #np.where(ETincr>SMincrt_1,(ETincr-SMincrt_1)/f_consumed, P*0) 
             
     #SMincr=np.where(ETincr>SMincrt_1,SMincrt_1+Qsupply-ETincr,SMincrt_1-ETincr)
     SMincr=SMincrt_1+Qsupply-ETincr
