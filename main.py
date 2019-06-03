@@ -13,7 +13,7 @@ import get_dictionaries as gd
 import numpy.ma as ma
 from matplotlib import pyplot as plt
 
-def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
+def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
         wateryear = ['0101','1231'], dS_GRACE=None, log=True):
     if log:
         fn=output_nc.replace('.nc','.txt')
@@ -325,7 +325,7 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,
 #            cf =  12 #soil mositure correction factor to componsate the variation in filling up and drying in a month
             SRO,SROincr=SCS_calc_SRO(P,I,SMmax,SM,Qsupply-ETincr,cf)
 ### Step 3: Percolation
-            k=1 # percolation factor
+             # percolation factor
             
             perc=np.where(SM>perc_min_ratio*SMmax,SM*(np.exp(-k/SM)),P*0)
             #perc=P*0.0
