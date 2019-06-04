@@ -13,7 +13,7 @@ import get_dictionaries as gd
 import numpy.ma as ma
 from matplotlib import pyplot as plt
 
-def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
+def run(input_nc, output_nc, rootdepth_par = 1,
         wateryear = ['0101','1231'], dS_GRACE=None, log=True):
     if log:
         fn=output_nc.replace('.nc','.txt')
@@ -21,8 +21,6 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
         f.write('input_nc: {0} \n'.format(input_nc))
         f.write('output_nc: {0} \n'.format(output_nc))
         f.write('rootdepth_par: {0} \n'.format(rootdepth_par))
-        f.write('cf: {0} \n'.format(cf))
-        f.write('perc_min_ratio: {0} \n'.format(perc_min_ratio))
         f.write('wateryear: {0} \n'.format(wateryear))
         f.write('dS_GRACE: {0} \n'.format(dS_GRACE))
        
@@ -292,9 +290,7 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
     check_sro=[]
     check_p_et_ds=[]
     check_etb=[]
-    check_Qsup=[]
-    check_dS=[]
-    check_dSGW=[]
+    check_Qsupply=[]
     for yyyy in years_ls:
         print '\tyear: {0}'.format(yyyy)
         yyyyi = years_ls.index(yyyy)
@@ -303,7 +299,7 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
 
         for t in time_indeces[yyyy]:
             dm = calendar.monthrange(yyyy,time_ls[t]%100)[1]
-#            print '\tMonth: {0}\tdays: {1}'.format(time_ls[t],dm)
+            print '\tMonth: {0}\tdays: {1}'.format(time_ls[t],dm)
 ### Step 0: Get data of the month and previous month
             nrd=np.where(nRD[t,:,:]>0,nRD[t,:,:],1)
             #nrd=dm
@@ -318,38 +314,48 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
                 SMincrt_1=P*0
             else:
                 SMgt_1=sm_g[t-1,:,:]  
-                SMincrt_1=sm_b[t-1,:,:]            
+                SMincrt_1=sm_b[t-1,:,:]    
+                
+            cf =  20 #soil mositure correction factor to componsate the variation in filling up and drying in a month
+            SMt_1=SMgt_1+SMincrt_1
+            Qsupply=P*0
+            SRO,SROincr=SCS_calc_SRO(P,I,SMmax,SMt_1,Qsupply,cf)
+            SROg=SRO-SROincr
+            #SMgt_1=np.where(SMgt_1-SROg>0,SMgt_1-SROg,SMgt_1*0)
+            #SMincrt_1=np.where(SMincrt_1-SROincr>0,SMincrt_1-SROincr,SMincrt_1*0)
+            
+            SMgt_1=SMgt_1-SROg
+            SMincrt_1=SMincrt_1-SROincr
 ### Step 1: Soil moisture
             SMg,SMincr,SM,dsm,Qsupply,ETincr,ETg=SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed)    
 ### Step 2: SRO
-#            cf =  12 #soil mositure correction factor to componsate the variation in filling up and drying in a month
-            SRO,SROincr=SCS_calc_SRO(P,I,SMmax,SM,Qsupply-ETincr,cf)
+            cf =  20 #soil mositure correction factor to componsate the variation in filling up and drying in a month
+            SRO,SROincr=SCS_calc_SRO(P,I,SMmax,SM,Qsupply,cf)
 ### Step 3: Percolation
-             # percolation factor
+            k=1 # percolation factor
             
-            perc=np.where(SM>perc_min_ratio*SMmax,SM*(np.exp(-k/SM)),P*0)
-            #perc=P*0.0
-            #SM = SM - perc_fromSM
-            
+            perc=np.where(SM>0.9*SMmax,SM*(np.exp(-k/SM)),P*0)
+            SMincr = np.where(SMincr-SROincr*nrd>0,SMincr-SROincr*nrd,P*0)
             SMg_ratio = np.where(SM==0,1,SMg/SM)
             SMincr_ratio = np.where(SM==0,1,SMincr/SM)
             perc_green = perc*SMg_ratio
             perc_incr = perc*SMincr_ratio
+            perc_green = np.where(SMg>perc_green, perc_green, SMg)
+            perc_incr = np.where(SMincr>perc*SMincr_ratio, perc_incr, SMincr)
             
-            SMg = SMg-perc_green
-            SMincr = SMincr-perc_incr-SROincr
-            SMincr=np.where(SMincr<0,0,SMincr)
-            SM = SMg+SMincr
-            #dsm = SM-(SMgt_1+SMincrt_1)
+            SMg = np.where(SMg-perc_green>0, SMg-perc_green, P*0)
+            SMincr = np.where(SMincr-perc_incr >0, SMincr-perc_incr, P*0)
             
-						
-            #diff = P+Qsupply-ETa-dsm-SRO
-            #SRO=np.where(diff>0,0,P+Qsupply-ETa-dsm)                             
-            
+#            ###updating the soil moisture by subtracting the surface runoff
+#            SROg=SRO-SROincr
+#            SMg=np.where(SMg-SROg>0,SMg-SROg,SMg*0)
+#            SMincr=np.where(SMincr-SROincr>0,SMincr-SROincr,SMincr*0)
+
+            SM = SMg+SMincr        
+                                               
             Qperc=perc
             Qperc_incr=perc_incr
-                
-            
+               
             #Qperc=np.where((P+Qsupply)>(ETa+dsm+SRO),(P+Qsupply)-(ETa+dsm+SRO),0)
             #Qperc_incr=np.where(Qsupply>(SROincr+ETincr),Qsupply-(SROincr+ETincr),0)
             
@@ -360,8 +366,8 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
             sr_var[t,:,:]=SRO*nrd
             incsr_var[t,:,:]=SROincr*nrd
             dsm_var[t,:,:]=dsm
-            per_var[t,:,:]=Qperc #*nrd
-            incper_var[t,:,:]=Qperc_incr #*nrd        
+            per_var[t,:,:]=Qperc*nrd
+            incper_var[t,:,:]=Qperc_incr*nrd        
             sup_var[t,:,:]=Qsupply*nrd
             supsw_var[t,:,:]=QsupplySW*nrd
             supgw_var[t,:,:]=QsupplyGW*nrd
@@ -379,7 +385,6 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
         ETa=et[ti1:ti2,:,:]
         SRO=sr_var[ti1:ti2,:,:]
         QsupplySW=supsw_var[ti1:ti2,:,:]  
-        QsupplyGW=supgw_var[ti1:ti2,:,:] 
         dSM=dsm_var[ti1:ti2,:,:] 
         BFratio,P_ET_dS=BFratio_y(P,ETa,QsupplySW,SRO,dS,dSM) 
         print('BF/SRO: {0}'.format(BFratio))
@@ -389,34 +394,17 @@ def run(input_nc, output_nc, rootdepth_par = 1,cf =  12,perc_min_ratio=0.3,k=1,
         tr_var[ti1:ti2,:,:]=TR        
         
         SROavg=np.nanmean(12*np.nanmean(SRO,axis=0))
-        BFavg=np.nanmean(12*np.nanmean(BF,axis=0))
-        ETbavg=np.nanmean(12*np.nanmean(etb_var[ti1:ti2,:,:],axis=0))
-        Qsupavg=np.nanmean(12*np.nanmean(sup_var[ti1:ti2,:,:],axis=0))
-        Qpercavg=np.nanmean(12*np.nanmean(per_var[ti1:ti2,:,:],axis=0))
-        QsupplyGWavg=np.nanmean(12*np.nanmean(QsupplyGW,axis=0))
-        dSGW=Qpercavg-QsupplyGWavg*1.01-BFavg
+        ETbavg=np.nanmean(12*np.nanmean(ETincr,axis=0))
+        Qsupplyavg=np.nanmean(12*np.nanmean(sup_var[t,:,:],axis=0))
         check_sro.append(SROavg)
         check_p_et_ds.append(P_ET_dS)
         check_etb.append(ETbavg)
-        check_Qsup.append(Qsupavg)
-        check_dS.append(dS)
-        check_dSGW.append(dSGW)
-    plt.plot(check_sro,label='SRO')
-    plt.plot(check_p_et_ds,label= 'P - Et- ds' )  
+        check_Qsupply.append(Qsupplyavg)
+    #plt.plot(check_sro,label='SRO')
+    #plt.plot(check_p_et_ds,label= 'P - Et- ds')
+    plt.plot(check_etb, label=' etb')
+    plt.plot(check_Qsupply, label=' Qsuuply')
     plt.legend()
-    plt.title(output_nc)
-    plt.show()
-    ###
-    plt.plot(check_dS, label=' dSGrace' )
-    plt.plot(check_dSGW, label=' dSGW' )
-    plt.legend()
-    plt.title(output_nc)
-    plt.show()   
-    ###
-    plt.plot(check_etb, label=' etb' )
-    plt.plot(check_Qsup, label=' Qsup' )
-    plt.legend()
-    plt.title(output_nc)
     plt.show()
 ### Finish
     print 'Closing netcdf...'
@@ -445,13 +433,12 @@ def BFratio_y(P,ETa,Qsupply_sw,SRO,dS,dsm):
 def SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed):
     SMt_1=SMgt_1+SMincrt_1
     ETr=np.where(I>0,ETa-I, ETa)
-    SMtemp=SMgt_1+np.maximum(P-I,P*0)
+    SMtemp=SMgt_1+np.where(P-I>0,P-I,P*0)
     SMg=np.where(SMtemp-ETr>0,SMtemp-ETr,P*0)
     ETincr=np.where(SMtemp-ETr>0,P*0,ETr-SMtemp)
     Qsupply=np.where(ETincr>SMincrt_1,(ETincr-SMincrt_1)/f_consumed, P*0) 
-            
-    #SMincr=np.where(ETincr>SMincrt_1,SMincrt_1+Qsupply-ETincr,SMincrt_1-ETincr)
-    SMincr=SMincrt_1+Qsupply-ETincr
+    SMincr=np.where(ETincr>SMincrt_1,SMincrt_1+Qsupply-ETincr,SMincrt_1-ETincr)
+    #SMincr=SMincrt_1+Qsupply-ETincr
     
     SM = SMg+SMincr
     SMincr=np.where(SM>SMmax,SMincr-SMincr/SM*(SM-SMmax),SMincr)     
