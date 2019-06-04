@@ -15,16 +15,7 @@ from matplotlib import pyplot as plt
 
 def run(input_nc, output_nc, rootdepth_par = 1,
         wateryear = ['0101','1231'], dS_GRACE=None, log=True):
-    if log:
-        fn=output_nc.replace('.nc','.txt')
-        f=open(fn,'w')
-        f.write('input_nc: {0} \n'.format(input_nc))
-        f.write('output_nc: {0} \n'.format(output_nc))
-        f.write('rootdepth_par: {0} \n'.format(rootdepth_par))
-        f.write('wateryear: {0} \n'.format(wateryear))
-        f.write('dS_GRACE: {0} \n'.format(dS_GRACE))
-       
-        f.close()
+
     '''
     Executes the main module of WAWB
     '''
@@ -291,6 +282,8 @@ def run(input_nc, output_nc, rootdepth_par = 1,
     check_p_et_ds=[]
     check_etb=[]
     check_Qsupply=[]
+    check_dS=[]
+    check_dSGW=[]
     for yyyy in years_ls:
         print '\tyear: {0}'.format(yyyy)
         yyyyi = years_ls.index(yyyy)
@@ -385,6 +378,7 @@ def run(input_nc, output_nc, rootdepth_par = 1,
         ETa=et[ti1:ti2,:,:]
         SRO=sr_var[ti1:ti2,:,:]
         QsupplySW=supsw_var[ti1:ti2,:,:]  
+        QsupplyGW=supgw_var[ti1:ti2,:,:]  
         dSM=dsm_var[ti1:ti2,:,:] 
         BFratio,P_ET_dS=BFratio_y(P,ETa,QsupplySW,SRO,dS,dSM) 
         print('BF/SRO: {0}'.format(BFratio))
@@ -394,23 +388,53 @@ def run(input_nc, output_nc, rootdepth_par = 1,
         tr_var[ti1:ti2,:,:]=TR        
         
         SROavg=np.nanmean(12*np.nanmean(SRO,axis=0))
-        ETbavg=np.nanmean(12*np.nanmean(ETincr,axis=0))
-        Qsupplyavg=np.nanmean(12*np.nanmean(sup_var[t,:,:],axis=0))
+        ETbavg=np.nanmean(12*np.nanmean(etb_var[ti1:ti2,:,:],axis=0))
+        Qsupplyavg=np.nanmean(12*np.nanmean(sup_var[ti1:ti2,:,:],axis=0))        
+        Qpercavg=np.nanmean(12*np.nanmean(per_var[ti1:ti2,:,:],axis=0))
+        BFavg=np.nanmean(12*np.nanmean(BF,axis=0))
+        QsupplyGWavg=np.nanmean(12*np.nanmean(QsupplyGW,axis=0))
+        dSGW=Qpercavg-BFavg-QsupplyGWavg*1.01
+        
         check_sro.append(SROavg)
         check_p_et_ds.append(P_ET_dS)
         check_etb.append(ETbavg)
         check_Qsupply.append(Qsupplyavg)
-    #plt.plot(check_sro,label='SRO')
-    #plt.plot(check_p_et_ds,label= 'P - Et- ds')
-    plt.plot(check_etb, label=' etb')
-    plt.plot(check_Qsupply, label=' Qsuuply')
+        check_dS.append(dS)
+        check_dSGW.append(dSGW)
+    #plot 1: P-ET-dS and SRO
+    plt.plot(check_sro,label='SRO')
+    plt.plot(check_p_et_ds,label= 'P - Et- ds')
     plt.legend()
+    plt.title(output_nc)
     plt.show()
+    #plot 2: ETb and Qsupply
+    plt.plot(check_etb, label=' etb')
+    plt.plot(check_Qsupply, label=' Qsuply')
+    plt.legend()
+    plt.title(output_nc)
+    plt.show()
+    #plot 3: dSGrace and dSGW
+    plt.plot(check_dS, label=' dS')
+    plt.plot(check_dSGW, label=' dSGW')
+    plt.legend()
+    plt.title(output_nc)
+    plt.show()    
 ### Finish
     print 'Closing netcdf...'
     out_nc.close()
     ended=dt.datetime.now()
     print 'Time elapsed: {0}'.format(ended-started)
+    if log:
+        fn=output_nc.replace('.nc','.txt')
+        f=open(fn,'w')
+        f.write('input_nc: {0} \n'.format(input_nc))
+        f.write('output_nc: {0} \n'.format(output_nc))
+        f.write('rootdepth_par: {0} \n'.format(rootdepth_par))
+        f.write('wateryear: {0} \n'.format(wateryear))
+        f.write('dS_GRACE: {0} \n'.format(dS_GRACE))
+        f.write('Started at: {0} \n'.format(started))
+        f.write('Time elapsed: {0} \n'.format(ended-started))
+        f.close()
 #%% Functions        
 def BFratio_y(P,ETa,Qsupply_sw,SRO,dS,dsm):
     '''
