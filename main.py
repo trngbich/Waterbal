@@ -13,7 +13,7 @@ import get_dictionaries as gd
 import numpy.ma as ma
 from matplotlib import pyplot as plt
 
-def run(input_nc, output_nc, rootdepth_par = 1,
+def run(input_nc, output_nc, rootdepth_par = 1.0, cf = 20.0, k=1.0, Perc_threshold = 0.9,
         wateryear = ['0101','1231'], dS_GRACE=None, log=True):
 
     '''
@@ -309,7 +309,7 @@ def run(input_nc, output_nc, rootdepth_par = 1,
                 SMgt_1=sm_g[t-1,:,:]  
                 SMincrt_1=sm_b[t-1,:,:]    
                 
-            cf =  20 #soil mositure correction factor to componsate the variation in filling up and drying in a month
+           # cf =  20 #soil mositure correction factor to componsate the variation in filling up and drying in a month
             SMt_1=SMgt_1+SMincrt_1
             Qsupply=P*0
             SRO,SROincr=SCS_calc_SRO(P,I,SMmax,SMt_1,Qsupply,cf)
@@ -322,12 +322,12 @@ def run(input_nc, output_nc, rootdepth_par = 1,
 ### Step 1: Soil moisture
             SMg,SMincr,SM,dsm,Qsupply,ETincr,ETg=SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed)    
 ### Step 2: SRO
-            cf =  20 #soil mositure correction factor to componsate the variation in filling up and drying in a month
+             #soil mositure correction factor to componsate the variation in filling up and drying in a month
             SRO,SROincr=SCS_calc_SRO(P,I,SMmax,SM,Qsupply,cf)
 ### Step 3: Percolation
-            k=1 # percolation factor
+            #k=1 # percolation factor
             
-            perc=np.where(SM>0.9*SMmax,SM*(np.exp(-k/SM)),P*0)
+            perc=np.where(SM>Perc_threshold*SMmax,SM*(np.exp(-k/SM)),P*0)
             SMincr = np.where(SMincr-SROincr*nrd>0,SMincr-SROincr*nrd,P*0)
             SMg_ratio = np.where(SM==0,1,SMg/SM)
             SMincr_ratio = np.where(SM==0,1,SMincr/SM)
@@ -430,6 +430,9 @@ def run(input_nc, output_nc, rootdepth_par = 1,
         f.write('input_nc: {0} \n'.format(input_nc))
         f.write('output_nc: {0} \n'.format(output_nc))
         f.write('rootdepth_par: {0} \n'.format(rootdepth_par))
+        f.write('cf: {0} \n'.format(cf))
+        f.write('k: {0} \n'.format(k))
+        f.write('Perc_threshold: {0} \n'.format(Perc_threshold))
         f.write('wateryear: {0} \n'.format(wateryear))
         f.write('dS_GRACE: {0} \n'.format(dS_GRACE))
         f.write('Started at: {0} \n'.format(started))
