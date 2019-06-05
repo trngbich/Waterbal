@@ -333,8 +333,8 @@ def run(input_nc, output_nc, rootdepth_par = 1.0, cf = 20.0, k=1.0, Perc_thresho
             SMincr_ratio = np.where(SM==0,1,SMincr/SM)
             perc_green = perc*SMg_ratio
             perc_incr = perc*SMincr_ratio
-            perc_green = np.where(SMg>perc_green, perc_green, SMg)
-            perc_incr = np.where(SMincr>perc*SMincr_ratio, perc_incr, SMincr)
+            perc_green = np.where(SMg>perc_green, perc_green, SMg*0)
+            perc_incr = np.where(SMincr>perc*SMincr_ratio, perc_incr, SMincr*0)
             
             SMg = np.where(SMg-perc_green>0, SMg-perc_green, P*0)
             SMincr = np.where(SMincr-perc_incr >0, SMincr-perc_incr, P*0)
