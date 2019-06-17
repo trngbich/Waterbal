@@ -312,31 +312,25 @@ def run(input_nc, output_nc, rootdepth_par = 1.0, cf = 20.0, k=1.0, Perc_thresho
            # cf =  20 #soil mositure correction factor to componsate the variation in filling up and drying in a month
             SMt_1=SMgt_1+SMincrt_1
             Qsupply=P*0
-            SRO,SROincr=SCS_calc_SRO(P,I,SMmax,SMt_1,Qsupply,cf)
-            SROg=SRO-SROincr
-            SMgt_1=np.where(SMgt_1-SROg>0,SMgt_1-SROg,SMgt_1*0)
-            SMincrt_1=np.where(SMincrt_1-SROincr>0,SMincrt_1-SROincr,SMincrt_1*0)
-            
+            SRO=SCS_calc_SRO(P,I,SMmax,SMt_1,Qsupply,cf)
+
 #            SMgt_1=SMgt_1-SROg
 #            SMincrt_1=SMincrt_1-SROincr
 ### Step 1: Soil moisture
             SMg,SMincr,SM,dsm,Qsupply,ETincr,ETg=SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed)    
 ### Step 2: SRO
              #soil mositure correction factor to componsate the variation in filling up and drying in a month
-            SRO,SROincr=SCS_calc_SRO(P,I,SMmax,SM,Qsupply,cf)
+            SRO=SCS_calc_SRO(P,I,SMmax,SM,Qsupply,cf)
 ### Step 3: Percolation
-            #k=1 # percolation factor
-            
+            #k=1 # percolation factor            
             perc=np.where(SM>Perc_threshold*SMmax,SM*(np.exp(-k/SM)),P*0)
-            SMincr = np.where(SMincr-SROincr*nrd>0,SMincr-SROincr*nrd,P*0)
-            SMg_ratio = np.where(SM==0,1,SMg/SM)
-            SMincr_ratio = np.where(SM==0,1,SMincr/SM)
-            perc_green = perc*SMg_ratio
-            perc_incr = perc*SMincr_ratio
-            perc_green = np.where(SMg>perc_green, perc_green, SMg*0)
-            perc_incr = np.where(SMincr>perc*SMincr_ratio, perc_incr, SMincr*0)
+            percratio=perc/(perc+SRO)
+            totalreturn=Qsupply-ETincr
+            perc_incr=totalreturn*percratio
+            SROincr=totalreturn-perc_incr
             
-            SMg = np.where(SMg-perc_green>0, SMg-perc_green, P*0)
+            SMincr = np.where(SMincr-SROincr-perc_incr>0,SMincr-SROincr,P*0)
+
             SMincr = np.where(SMincr-perc_incr >0, SMincr-perc_incr, P*0)
             
 #            ###updating the soil moisture by subtracting the surface runoff
@@ -480,9 +474,7 @@ def SM_bucket(P,ETa,I,SMmax,SMgt_1,SMincrt_1,f_consumed):
 def SCS_calc_SRO(P,I,SMmax,SM,Qsupply, cf):    
     SM=np.where(SM>SMmax,SMmax,SM)        
     SRO= np.where((P-I+Qsupply)>0,((P-I+Qsupply)**2)/(P-I+Qsupply+cf*(SMmax-SM)),P*0)
-    SROg= np.where(P-I>0,((P-I)**2)/(P-I+cf*(SMmax-SM)),P*0)
-    SROincr=SRO-SROg
-    return SRO,SROincr
+    return SRO
 
 def Consumed_fraction(lu):
     f_consumed=np.copy(lu)
